@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AniDub India</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="data/seed.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2c;
+      --border: #2a2a3d;
+      --accent: #7c3aed;
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,20,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 24px; height: 60px;
+    }
+    .nav-logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); text-decoration: none; }
+    .nav-logo span { color: var(--text); }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text-muted); text-decoration: none; font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--text); }
+    .nav-links { display: flex; gap: 20px; margin-left: auto; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── Hero strip ── */
+    .hero-bg {
+      background: linear-gradient(180deg, rgba(124,58,237,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      display: flex;
+      gap: 32px;
+    }
+
+    .poster {
+      flex-shrink: 0;
+      width: 200px;
+      aspect-ratio: 2/3;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .poster img { width: 100%; height: 100%; object-fit: cover; }
+    .poster-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 16px;
+      color: var(--text-muted); font-size: 0.85rem;
+      background: linear-gradient(135deg, #1e1e2c, #2a2a3d);
+    }
+
+    .hero-info { flex: 1; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-muted); text-decoration: none; font-size: 0.85rem;
+      margin-bottom: 16px; transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--text); }
+    .anime-title { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+    .anime-title-jp { font-size: 1rem; color: var(--text-muted); margin-bottom: 16px; }
+
+    .meta-row {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+    }
+    .meta-tag {
+      padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
+    }
+    .meta-tag.ongoing { border-color: var(--green); color: var(--green); }
+    .meta-tag.completed { border-color: var(--blue); color: var(--blue); }
+
+    .genre-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+    .genre-pill {
+      padding: 3px 10px; border-radius: 20px; font-size: 0.78rem;
+      background: var(--accent-soft, rgba(124,58,237,0.12)); color: var(--accent); border: 1px solid rgba(124,58,237,0.3);
+    }
+
+    .synopsis {
+      font-size: 0.92rem; color: var(--text-muted); line-height: 1.7;
+      display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .synopsis.expanded { display: block; }
+    .synopsis-toggle {
+      background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.85rem;
+      margin-top: 6px; padding: 0;
+    }
+
+    /* ── Dub section ── */
+    .content {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    .section-hd {
+      font-size: 1.1rem; font-weight: 700;
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Dubs grouped by season */
+    .season-block { margin-bottom: 32px; }
+    .season-title {
+      font-size: 1rem; font-weight: 700;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .season-ep { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+
+    .dub-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--surface); border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .dub-table th {
+      text-align: left; padding: 10px 16px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-muted); background: var(--surface2);
+    }
+    .dub-table td {
+      padding: 12px 16px; font-size: 0.88rem;
+      border-top: 1px solid var(--border);
+    }
+    .dub-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .lang-flag {
+      display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+    }
+    .lang-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    .status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+    }
+    .status-badge.complete { background: rgba(34,197,94,0.15); color: var(--green); }
+    .status-badge.partial { background: rgba(234,179,8,0.15); color: var(--yellow); }
+    .status-badge.removed { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    .platform-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--accent); text-decoration: none; font-size: 0.85rem;
+    }
+    .platform-link:hover { text-decoration: underline; }
+
+    .no-dubs {
+      text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.9rem;
+    }
+
+    /* MAL link */
+    .mal-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 20px;
+      color: var(--text-muted); text-decoration: none; font-size: 0.85rem;
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .mal-link:hover { border-color: var(--accent); color: var(--text); }
+
+    /* Loading / error states */
+    .loading { text-align: center; padding: 80px 24px; color: var(--text-muted); }
+    .error-msg { text-align: center; padding: 60px 24px; }
+    .error-msg h2 { color: var(--red); margin-bottom: 8px; }
+    .error-msg a { color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .hero-inner { flex-direction: column; padding: 24px 16px; }
+      .poster { width: 140px; }
+      .content { padding: 24px 16px; }
+      nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
+  <div class="nav-links">
+    <a href="index.html">Browse</a>
+    <a href="admin.html">Admin</a>
+  </div>
+</nav>
+
+<div id="app">
+  <div class="loading">Loading anime details…</div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const animeId = params.get('id');
+
+  const langColors = {
+    Tamil: '#dc2626', Telugu: '#d97706', Hindi: '#16a34a',
+    Malayalam: '#0284c7', Kannada: '#7c3aed'
+  };
+
+  const platformUrls = {
+    'Crunchyroll': 'https://www.crunchyroll.com',
+    'Netflix': 'https://www.netflix.com',
+    'Disney+ Hotstar': 'https://www.hotstar.com',
+    'Amazon Prime Video': 'https://www.primevideo.com',
+    'Sony LIV': 'https://www.sonyliv.com',
+    'Zee5': 'https://www.zee5.com',
+    'JioCinema': 'https://www.jiocinema.com',
+  };
+
+  function posterUrl(anime) {
+    if (anime.poster_path) {
+      const { data } = supabase.storage.from('posters').getPublicUrl(anime.poster_path);
+      return data.publicUrl;
+    }
+    return anime.poster_url || null;
+  }
+
+  function statusClass(s) {
+    const m = { 'Complete': 'complete', 'Partial': 'partial', 'Removed': 'removed' };
+    return m[s] || 'complete';
+  }
+
+  function renderDubTable(dubs) {
+    if (!dubs.length) return '<p class="no-dubs">No dubs recorded for this season yet.</p>';
+    return `<table class="dub-table">
+      <thead><tr>
+        <th>Language</th><th>Platform</th><th>Status</th><th>Episodes</th><th>Notes</th>
+      </tr></thead>
+      <tbody>${dubs.map(d => `
+        <tr>
+          <td><span class="lang-flag">
+            <span class="lang-dot" style="background:${langColors[d.language] || '#6b7280'}"></span>
+            ${d.language}
+          </span></td>
+          <td>${platformUrls[d.platform]
+            ? `<a class="platform-link" href="${platformUrls[d.platform]}" target="_blank" rel="noopener">${d.platform} ↗</a>`
+            : d.platform}</td>
+          <td><span class="status-badge ${statusClass(d.dub_status)}">${d.dub_status}</span></td>
+          <td>${d.episodes_dubbed || '—'}</td>
+          <td style="color:var(--text-muted)">${d.notes || '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  function renderPage(anime, seasons, dubs) {
+    const src = posterUrl(anime);
+    const imgEl = src
+      ? `<img src="${src}" alt="${anime.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const placeholder = `<div class="poster-placeholder" ${src ? 'style="display:none"' : ''}>${anime.title}</div>`;
+
+    const genres = (anime.genre || []).map(g => `<span class="genre-pill">${g}</span>`).join('');
+    const statusCls = anime.status === 'Ongoing' ? 'ongoing' : 'completed';
+
+    // Group dubs: season-level vs anime-level
+    const seasonDubMap = {};
+    const animeLevelDubs = [];
+    dubs.forEach(d => {
+      if (d.season_id) {
+        if (!seasonDubMap[d.season_id]) seasonDubMap[d.season_id] = [];
+        seasonDubMap[d.season_id].push(d);
+      } else {
+        animeLevelDubs.push(d);
+      }
+    });
+
+    let seasonHtml = '';
+    if (seasons.length > 0) {
+      seasonHtml = seasons.map(s => {
+        const sectionDubs = seasonDubMap[s.id] || [];
+        const epRange = (s.episodes_start && s.episodes_end)
+          ? `Ep ${s.episodes_start}–${s.episodes_end}` : '';
+        return `<div class="season-block">
+          <div class="season-title">
+            Season ${s.season_number}${s.season_title ? ` — ${s.season_title}` : ''}
+            ${epRange ? `<span class="season-ep">${epRange}</span>` : ''}
+          </div>
+          ${renderDubTable(sectionDubs)}
+        </div>`;
+      }).join('');
+    }
+
+    if (animeLevelDubs.length > 0) {
+      seasonHtml = `<div class="season-block">
+        <div class="season-title">All Seasons / Entire Series</div>
+        ${renderDubTable(animeLevelDubs)}
+      </div>` + seasonHtml;
+    }
+
+    if (!seasonHtml) {
+      seasonHtml = '<p class="no-dubs">No dub information recorded yet. <a href="https://forms.google.com" style="color:var(--accent)">Submit a dub →</a></p>';
+    }
+
+    const malUrl = anime.mal_id ? `https://myanimelist.net/anime/${anime.mal_id}` : null;
+
+    document.title = `${anime.title} — AniDub India`;
+
+    return `
+    <div class="hero-bg">
+      <div class="hero-inner">
+        <div class="poster">${imgEl}${placeholder}</div>
+        <div class="hero-info">
+          <a class="back-link" href="index.html">← Back to Browse</a>
+          <h1 class="anime-title">${anime.title}</h1>
+          ${anime.title_jp ? `<div class="anime-title-jp">${anime.title_jp}</div>` : ''}
+          <div class="meta-row">
+            <span class="meta-tag">${anime.type || 'TV'}</span>
+            <span class="meta-tag">${anime.year || ''}</span>
+            ${anime.total_episodes ? `<span class="meta-tag">${anime.total_episodes} eps</span>` : ''}
+            <span class="meta-tag ${statusCls}">${anime.status}</span>
+          </div>
+          <div class="genre-list">${genres}</div>
+          ${anime.synopsis ? `
+            <p class="synopsis" id="synopsis">${anime.synopsis}</p>
+            <button class="synopsis-toggle" onclick="toggleSynopsis()">Show more</button>
+          ` : ''}
+          ${malUrl ? `<a class="mal-link" href="${malUrl}" target="_blank" rel="noopener">View on MyAnimeList ↗</a>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="section-hd">Dub Availability</div>
+      ${seasonHtml}
+    </div>`;
+  }
+
+  function toggleSynopsis() {
+    const el = document.getElementById('synopsis');
+    const btn = el.nextElementSibling;
+    el.classList.toggle('expanded');
+    btn.textContent = el.classList.contains('expanded') ? 'Show less' : 'Show more';
+  }
+
+  async function load() {
+    const app = document.getElementById('app');
+
+    if (!animeId) {
+      app.innerHTML = `<div class="error-msg"><h2>No anime selected</h2><p><a href="index.html">← Back to browse</a></p></div>`;
+      return;
+    }
+
+    let animeData, seasonsData, dubsData;
+
+    if (window.DEMO_MODE) {
+      const id = parseInt(animeId);
+      animeData = window.SEED_ANIME.find(a => a.id === id) || null;
+      seasonsData = [];
+      dubsData = window.SEED_DUBS.filter(d => d.anime_id === id).sort((a, b) => a.language.localeCompare(b.language));
+    } else {
+      const [animeRes, seasonsRes, dubsRes] = await Promise.all([
+        supabaseClient.from('anime').select('*').eq('id', animeId).single(),
+        supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number'),
+        supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language'),
+      ]);
+      if (animeRes.error || !animeRes.data) {
+        app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
+        return;
+      }
+      animeData = animeRes.data;
+      seasonsData = seasonsRes.data || [];
+      dubsData = dubsRes.data || [];
+    }
+
+    if (!animeData) {
+      app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
+      return;
+    }
+
+    app.innerHTML = renderPage(animeData, seasonsData, dubsData);
+  }
+
+  load();
+</script>
+</body>
+</html>

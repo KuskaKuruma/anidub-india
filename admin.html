@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — AniDub India</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2c;
+      --border: #2a2a3d;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,20,0.95); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px; padding: 0 24px; height: 60px;
+    }
+    .nav-logo { font-size: 1.2rem; font-weight: 700; color: var(--accent); text-decoration: none; }
+    .nav-logo span { color: var(--text); }
+    .admin-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+      background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3);
+      letter-spacing: 0.06em;
+    }
+    .logout-btn {
+      margin-left: auto; padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+      font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Login screen ── */
+    .login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 60px); padding: 24px;
+    }
+    .login-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 40px; width: 100%; max-width: 380px; text-align: center;
+    }
+    .login-card h2 { font-size: 1.4rem; margin-bottom: 6px; }
+    .login-card p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+    /* ── Form controls ── */
+    .form-group { margin-bottom: 16px; text-align: left; }
+    label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    input[type=text], input[type=email], input[type=password], input[type=number],
+    input[type=date], input[type=url], textarea, select {
+      width: 100%; padding: 10px 14px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: var(--surface2); }
+
+    .btn {
+      padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 0.9rem; font-weight: 600; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+    .btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-full { width: 100%; }
+
+    /* ── Layout ── */
+    .admin-layout {
+      display: flex; min-height: calc(100vh - 60px);
+    }
+    .sidebar {
+      width: 220px; flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 20px 0;
+    }
+    .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
+    .sidebar-label {
+      font-size: 0.7rem; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 8px; margin-bottom: 4px;
+    }
+    .sidebar-btn {
+      display: block; width: 100%; padding: 8px 12px; border-radius: 8px;
+      text-align: left; background: none; border: none; color: var(--text-muted);
+      font-size: 0.88rem; cursor: pointer; transition: all 0.2s;
+    }
+    .sidebar-btn:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-btn.active { background: rgba(124,58,237,0.15); color: var(--accent); font-weight: 600; }
+
+    .main-content { flex: 1; padding: 32px; overflow-y: auto; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title {
+      font-size: 1.3rem; font-weight: 700; margin-bottom: 24px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; margin-bottom: 20px;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+
+    /* ── Multi-select genre ── */
+    .genre-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .genre-check { display: none; }
+    .genre-chip {
+      padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text-muted); font-size: 0.82rem;
+      cursor: pointer; transition: all 0.2s; user-select: none;
+    }
+    .genre-check:checked + .genre-chip {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+
+    /* ── Image upload ── */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 10px; padding: 32px;
+      text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); color: var(--text); }
+    .drop-zone img { max-height: 160px; border-radius: 6px; margin-top: 12px; object-fit: contain; }
+    .drop-zone p { margin-bottom: 8px; }
+    .drop-zone small { font-size: 0.78rem; }
+
+    /* ── Table ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left; padding: 10px 14px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-muted); background: var(--surface2); border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 10px 14px; font-size: 0.88rem;
+      border-bottom: 1px solid var(--border); vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── Alerts ── */
+    .alert {
+      padding: 12px 16px; border-radius: 8px; font-size: 0.88rem;
+      margin-bottom: 16px; display: none;
+    }
+    .alert.show { display: block; }
+    .alert-success { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .alert-error { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+    /* ── Grid cols helper ── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* ── Search in admin ── */
+    .admin-search {
+      width: 100%; max-width: 360px; padding: 8px 14px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.88rem; outline: none;
+    }
+    .admin-search:focus { border-color: var(--accent); }
+
+    /* ── Modal ── */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 200;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    @media (max-width: 768px) {
+      .admin-layout { flex-direction: column; }
+      .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+      .sidebar-label { display: none; }
+      .sidebar-btn { width: auto; }
+      .main-content { padding: 20px 16px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
+  <span class="admin-badge">ADMIN</span>
+  <button class="logout-btn" id="logoutBtn" style="display:none" onclick="logout()">Log out</button>
+</nav>
+
+<!-- Login -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <h2>Admin Login</h2>
+    <p>Sign in with your admin account to manage anime data.</p>
+    <div id="loginAlert" class="alert alert-error"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@example.com" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary btn-full" id="loginBtn" onclick="login()">Sign In</button>
+  </div>
+</div>
+
+<!-- Admin Dashboard -->
+<div id="adminApp" style="display:none">
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Anime</div>
+        <button class="sidebar-btn active" onclick="showPanel('addAnime')">+ Add Anime</button>
+        <button class="sidebar-btn" onclick="showPanel('listAnime')">Browse / Edit</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Seasons & Dubs</div>
+        <button class="sidebar-btn" onclick="showPanel('addSeason')">+ Add Season</button>
+        <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Dub</button>
+        <button class="sidebar-btn" onclick="showPanel('listDubs')">Browse Dubs</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+
+      <!-- ── Add Anime ── -->
+      <div class="panel active" id="panel-addAnime">
+        <div class="panel-title">Add New Anime</div>
+        <div id="addAnimeAlert" class="alert"></div>
+
+        <div class="card">
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Title (English) *</label>
+              <input type="text" id="a_title" placeholder="Dragon Ball Z" />
+            </div>
+            <div class="form-group">
+              <label>Title (Japanese)</label>
+              <input type="text" id="a_title_jp" placeholder="ドラゴンボールZ" />
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="form-group">
+              <label>MAL ID</label>
+              <input type="number" id="a_mal_id" placeholder="813" />
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <select id="a_type">
+                <option>TV</option><option>Movie</option><option>OVA</option><option>ONA</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status *</label>
+              <select id="a_status">
+                <option>Completed</option><option>Ongoing</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Year *</label>
+              <input type="number" id="a_year" placeholder="2019" min="1960" max="2099" />
+            </div>
+            <div class="form-group">
+              <label>Total Episodes</label>
+              <input type="number" id="a_episodes" placeholder="26" min="0" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>MAL Poster URL (fallback)</label>
+            <input type="url" id="a_poster_url" placeholder="https://cdn.myanimelist.net/images/anime/…" />
+          </div>
+          <div class="form-group">
+            <label>Synopsis</label>
+            <textarea id="a_synopsis" rows="4" placeholder="Short description of the anime…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Genres *</label>
+            <div class="genre-grid" id="genreGrid"></div>
+          </div>
+          <div class="form-group">
+            <label>Upload Poster Image (WebP preferred)</label>
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('posterFile').click()">
+              <p>Click or drag & drop a poster image here</p>
+              <small>Recommended: 300×450px, WebP. Will be stored in Supabase Storage.</small>
+              <div id="posterPreview"></div>
+            </div>
+            <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handleFileSelect(this)" />
+          </div>
+          <div style="display:flex;gap:12px">
+            <button class="btn btn-primary" id="saveAnimeBtn" onclick="saveAnime()">Save Anime</button>
+            <button class="btn btn-ghost" onclick="clearAnimeForm()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Browse Anime ── -->
+      <div class="panel" id="panel-listAnime">
+        <div class="panel-title">
+          Browse Anime
+          <input class="admin-search" type="search" id="animeSearch" placeholder="Search…" oninput="filterAnimeList(this.value)" />
+        </div>
+        <div id="animeListWrap">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
+
+      <!-- ── Add Season ── -->
+      <div class="panel" id="panel-addSeason">
+        <div class="panel-title">Add Season</div>
+        <div id="addSeasonAlert" class="alert"></div>
+        <div class="card">
+          <div class="form-group">
+            <label>Select Anime *</label>
+            <select id="s_anime_id"><option value="">— select —</option></select>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Season Number *</label>
+              <input type="number" id="s_number" placeholder="1" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Season Title</label>
+              <input type="text" id="s_title" placeholder="Saiyan Saga (optional)" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Episode Start</label>
+              <input type="number" id="s_ep_start" placeholder="1" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Episode End</label>
+              <input type="number" id="s_ep_end" placeholder="26" min="1" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveSeason()">Save Season</button>
+        </div>
+      </div>
+
+      <!-- ── Add Dub ── -->
+      <div class="panel" id="panel-addDub">
+        <div class="panel-title">Add Dub</div>
+        <div id="addDubAlert" class="alert"></div>
+        <div class="card">
+          <div class="form-group">
+            <label>Select Anime *</label>
+            <select id="d_anime_id" onchange="loadSeasonsForDub(this.value)"><option value="">— select —</option></select>
+          </div>
+          <div class="form-group">
+            <label>Season (leave blank = whole anime)</label>
+            <select id="d_season_id"><option value="">Whole anime / all seasons</option></select>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Language *</label>
+              <select id="d_language">
+                <option>Tamil</option><option>Telugu</option><option>Hindi</option>
+                <option>Malayalam</option><option>Kannada</option>
+                <option>English</option><option>Bengali</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Platform *</label>
+              <select id="d_platform">
+                <option>Crunchyroll</option><option>Netflix</option>
+                <option>Disney+ Hotstar</option><option>Amazon Prime Video</option>
+                <option>Sony LIV</option><option>Zee5</option>
+                <option>JioCinema</option><option>YouTube</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Dub Status *</label>
+              <select id="d_status">
+                <option>Complete</option><option>Partial</option><option>Removed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Added Date *</label>
+              <input type="date" id="d_date" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Episodes Dubbed (if partial)</label>
+              <input type="text" id="d_episodes" placeholder="1-13" />
+            </div>
+            <div class="form-group">
+              <label>Notes</label>
+              <input type="text" id="d_notes" placeholder="Only S1 dubbed so far" />
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveDub()">Save Dub</button>
+        </div>
+      </div>
+
+      <!-- ── List Dubs ── -->
+      <div class="panel" id="panel-listDubs">
+        <div class="panel-title">Browse Dubs</div>
+        <div id="dubsListWrap">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Edit Anime Modal -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <div class="modal-title">Edit Anime</div>
+    <div id="editAlert" class="alert"></div>
+    <input type="hidden" id="e_id" />
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="e_title" />
+    </div>
+    <div class="form-group">
+      <label>Japanese Title</label>
+      <input type="text" id="e_title_jp" />
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Year</label>
+        <input type="number" id="e_year" />
+      </div>
+      <div class="form-group">
+        <label>Total Episodes</label>
+        <input type="number" id="e_episodes" />
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="e_type">
+          <option>TV</option><option>Movie</option><option>OVA</option><option>ONA</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="e_status">
+          <option>Completed</option><option>Ongoing</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Synopsis</label>
+      <textarea id="e_synopsis" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label>MAL Poster URL</label>
+      <input type="url" id="e_poster_url" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" onclick="deleteAnime()">Delete</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="updateAnime()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  const GENRES = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mecha','Mystery',
+    'Romance','Sci-Fi','Seinen','Shonen','Shoujo','Slice of Life','Sports','Supernatural','Thriller'];
+
+  let animeCache = [];
+  let selectedFile = null;
+  let editingId = null;
+
+  // ── Auth ──
+  async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) showAdmin();
+  }
+
+  async function login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('loginBtn');
+    const alert = document.getElementById('loginAlert');
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    hideAlert(alert);
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+
+    if (error) {
+      showAlert(alert, error.message, 'error');
+    } else {
+      showAdmin();
+    }
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    document.getElementById('adminApp').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('logoutBtn').style.display = 'none';
+  }
+
+  function showAdmin() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminApp').style.display = 'block';
+    document.getElementById('logoutBtn').style.display = 'block';
+    initAdmin();
+  }
+
+  async function initAdmin() {
+    buildGenreGrid();
+    setTodayDate();
+    await loadAnimeList();
+  }
+
+  // ── Helpers ──
+  function showAlert(el, msg, type = 'success') {
+    el.textContent = msg;
+    el.className = `alert alert-${type} show`;
+  }
+  function hideAlert(el) { el.className = 'alert'; }
+
+  function showPanel(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`panel-${name}`).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    if (name === 'listAnime') renderAnimeList(animeCache);
+    if (name === 'addSeason' || name === 'addDub') populateAnimeSelects();
+    if (name === 'listDubs') loadDubsList();
+  }
+
+  function setTodayDate() {
+    const today = new Date().toISOString().slice(0, 10);
+    const el = document.getElementById('d_date');
+    if (el) el.value = today;
+  }
+
+  // ── Genre grid ──
+  function buildGenreGrid() {
+    const grid = document.getElementById('genreGrid');
+    grid.innerHTML = GENRES.map(g => `
+      <label>
+        <input type="checkbox" class="genre-check" value="${g}" />
+        <span class="genre-chip">${g}</span>
+      </label>`).join('');
+  }
+
+  function getSelectedGenres() {
+    return [...document.querySelectorAll('.genre-check:checked')].map(c => c.value);
+  }
+
+  // ── Image upload ──
+  function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('posterPreview').innerHTML = `<img src="${e.target.result}" />`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Drag & drop
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        document.getElementById('posterPreview').innerHTML = `<img src="${ev.target.result}" />`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  async function uploadPoster(animeId) {
+    if (!selectedFile) return null;
+    const ext = selectedFile.name.split('.').pop();
+    const path = `posters/${animeId}.${ext}`;
+    const { error } = await supabase.storage
+      .from('posters').upload(path, selectedFile, { upsert: true });
+    if (error) throw error;
+    return path;
+  }
+
+  // ── Load anime list ──
+  async function loadAnimeList() {
+    const { data } = await supabase.from('anime').select('id, title, type, year, status').order('title');
+    animeCache = data || [];
+  }
+
+  function populateAnimeSelects() {
+    ['s_anime_id', 'd_anime_id'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '<option value="">— select —</option>' +
+        animeCache.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    });
+  }
+
+  function renderAnimeList(list) {
+    const wrap = document.getElementById('animeListWrap');
+    if (!list.length) {
+      wrap.innerHTML = '<p style="color:var(--text-muted)">No anime found.</p>';
+      return;
+    }
+    wrap.innerHTML = `<div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Title</th><th>Type</th><th>Year</th><th>Status</th><th></th></tr></thead>
+        <tbody>${list.map(a => `
+          <tr>
+            <td>${a.title}</td>
+            <td style="color:var(--text-muted)">${a.type}</td>
+            <td style="color:var(--text-muted)">${a.year}</td>
+            <td><span style="color:${a.status==='Ongoing'?'var(--green)':'var(--text-muted)'}">${a.status}</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="openEditModal('${a.id}')">Edit</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  function filterAnimeList(q) {
+    const filtered = q ? animeCache.filter(a => a.title.toLowerCase().includes(q.toLowerCase())) : animeCache;
+    renderAnimeList(filtered);
+  }
+
+  // ── Save Anime ──
+  async function saveAnime() {
+    const btn = document.getElementById('saveAnimeBtn');
+    const alert = document.getElementById('addAnimeAlert');
+    const title = document.getElementById('a_title').value.trim();
+    const year = parseInt(document.getElementById('a_year').value);
+    const genres = getSelectedGenres();
+
+    if (!title || !year || !genres.length) {
+      showAlert(alert, 'Please fill in Title, Year, and at least one Genre.', 'error');
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const row = {
+      title,
+      title_jp: document.getElementById('a_title_jp').value.trim() || null,
+      mal_id: parseInt(document.getElementById('a_mal_id').value) || null,
+      type: document.getElementById('a_type').value,
+      status: document.getElementById('a_status').value,
+      year,
+      total_episodes: parseInt(document.getElementById('a_episodes').value) || 0,
+      poster_url: document.getElementById('a_poster_url').value.trim() || null,
+      synopsis: document.getElementById('a_synopsis').value.trim() || null,
+      genre: genres,
+    };
+
+    const { data, error } = await supabase.from('anime').insert(row).select().single();
+    if (error) {
+      showAlert(alert, error.message, 'error');
+      btn.disabled = false; btn.textContent = 'Save Anime';
+      return;
+    }
+
+    // Upload poster if selected
+    if (selectedFile) {
+      try {
+        const path = await uploadPoster(data.id);
+        await supabase.from('anime').update({ poster_path: path }).eq('id', data.id);
+      } catch (e) {
+        console.error('Image upload failed:', e);
+      }
+    }
+
+    showAlert(alert, `"${title}" saved successfully!`, 'success');
+    clearAnimeForm();
+    btn.disabled = false; btn.textContent = 'Save Anime';
+    await loadAnimeList();
+  }
+
+  function clearAnimeForm() {
+    ['a_title','a_title_jp','a_mal_id','a_poster_url','a_synopsis','a_year','a_episodes']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.querySelectorAll('.genre-check').forEach(c => c.checked = false);
+    selectedFile = null;
+    document.getElementById('posterPreview').innerHTML = '';
+  }
+
+  // ── Edit Anime ──
+  async function openEditModal(id) {
+    const { data, error } = await supabase.from('anime').select('*').eq('id', id).single();
+    if (error || !data) return;
+
+    editingId = id;
+    document.getElementById('e_id').value = id;
+    document.getElementById('e_title').value = data.title;
+    document.getElementById('e_title_jp').value = data.title_jp || '';
+    document.getElementById('e_year').value = data.year;
+    document.getElementById('e_episodes').value = data.total_episodes || '';
+    document.getElementById('e_synopsis').value = data.synopsis || '';
+    document.getElementById('e_poster_url').value = data.poster_url || '';
+    document.getElementById('e_type').value = data.type;
+    document.getElementById('e_status').value = data.status;
+    hideAlert(document.getElementById('editAlert'));
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').classList.remove('open');
+    editingId = null;
+  }
+
+  async function updateAnime() {
+    const id = editingId;
+    const alert = document.getElementById('editAlert');
+    const row = {
+      title: document.getElementById('e_title').value.trim(),
+      title_jp: document.getElementById('e_title_jp').value.trim() || null,
+      year: parseInt(document.getElementById('e_year').value),
+      total_episodes: parseInt(document.getElementById('e_episodes').value) || 0,
+      synopsis: document.getElementById('e_synopsis').value.trim() || null,
+      poster_url: document.getElementById('e_poster_url').value.trim() || null,
+      type: document.getElementById('e_type').value,
+      status: document.getElementById('e_status').value,
+    };
+
+    const { error } = await supabase.from('anime').update(row).eq('id', id);
+    if (error) { showAlert(alert, error.message, 'error'); return; }
+
+    showAlert(alert, 'Updated successfully!', 'success');
+    await loadAnimeList();
+    renderAnimeList(animeCache);
+    setTimeout(closeModal, 800);
+  }
+
+  async function deleteAnime() {
+    if (!confirm('Delete this anime and all its seasons/dubs? This cannot be undone.')) return;
+    const id = editingId;
+    await supabase.from('dubs').delete().eq('anime_id', id);
+    await supabase.from('seasons').delete().eq('anime_id', id);
+    const { error } = await supabase.from('anime').delete().eq('id', id);
+    if (error) { alert(error.message); return; }
+    closeModal();
+    await loadAnimeList();
+    renderAnimeList(animeCache);
+  }
+
+  // ── Save Season ──
+  async function saveSeason() {
+    const alert = document.getElementById('addSeasonAlert');
+    const anime_id = document.getElementById('s_anime_id').value;
+    const season_number = parseInt(document.getElementById('s_number').value);
+    if (!anime_id || !season_number) {
+      showAlert(alert, 'Anime and Season Number are required.', 'error');
+      return;
+    }
+
+    const row = {
+      anime_id,
+      season_number,
+      season_title: document.getElementById('s_title').value.trim() || null,
+      episodes_start: parseInt(document.getElementById('s_ep_start').value) || null,
+      episodes_end: parseInt(document.getElementById('s_ep_end').value) || null,
+    };
+
+    const { error } = await supabase.from('seasons').insert(row);
+    if (error) { showAlert(alert, error.message, 'error'); return; }
+    showAlert(alert, 'Season added!', 'success');
+    ['s_number','s_title','s_ep_start','s_ep_end'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('s_anime_id').value = '';
+  }
+
+  // ── Load seasons for dub form ──
+  async function loadSeasonsForDub(animeId) {
+    const sel = document.getElementById('d_season_id');
+    sel.innerHTML = '<option value="">Whole anime / all seasons</option>';
+    if (!animeId) return;
+    const { data } = await supabase.from('seasons').select('*').eq('anime_id', animeId).order('season_number');
+    (data || []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = `Season ${s.season_number}${s.season_title ? ' — ' + s.season_title : ''}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ── Save Dub ──
+  async function saveDub() {
+    const alert = document.getElementById('addDubAlert');
+    const anime_id = document.getElementById('d_anime_id').value;
+    const language = document.getElementById('d_language').value;
+    const platform = document.getElementById('d_platform').value;
+    const added_date = document.getElementById('d_date').value;
+
+    if (!anime_id || !language || !platform || !added_date) {
+      showAlert(alert, 'Anime, Language, Platform, and Date are required.', 'error');
+      return;
+    }
+
+    const season_id = document.getElementById('d_season_id').value || null;
+    const row = {
+      anime_id, season_id, language, platform,
+      dub_status: document.getElementById('d_status').value,
+      added_date,
+      episodes_dubbed: document.getElementById('d_episodes').value.trim() || null,
+      notes: document.getElementById('d_notes').value.trim() || null,
+    };
+
+    const { error } = await supabase.from('dubs').insert(row);
+    if (error) { showAlert(alert, error.message, 'error'); return; }
+    showAlert(alert, `${language} dub on ${platform} added!`, 'success');
+    ['d_episodes','d_notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('d_season_id').value = '';
+    setTodayDate();
+  }
+
+  // ── Browse Dubs ──
+  async function loadDubsList() {
+    const { data } = await supabase
+      .from('dubs')
+      .select('*, anime(title)')
+      .order('added_date', { ascending: false })
+      .limit(100);
+
+    const wrap = document.getElementById('dubsListWrap');
+    if (!data || !data.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No dubs yet.</p>'; return; }
+
+    wrap.innerHTML = `<div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Anime</th><th>Language</th><th>Platform</th><th>Status</th><th>Date</th><th></th></tr></thead>
+        <tbody>${data.map(d => `
+          <tr>
+            <td>${d.anime?.title || '—'}</td>
+            <td>${d.language}</td>
+            <td style="color:var(--text-muted)">${d.platform}</td>
+            <td><span style="color:${d.dub_status==='Complete'?'var(--green)':d.dub_status==='Removed'?'var(--red)':'var(--yellow)'}">${d.dub_status}</span></td>
+            <td style="color:var(--text-muted)">${d.added_date}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteDub('${d.id}')">Remove</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  async function deleteDub(id) {
+    if (!confirm('Remove this dub record?')) return;
+    const { error } = await supabase.from('dubs').delete().eq('id', id);
+    if (error) { alert(error.message); return; }
+    loadDubsList();
+  }
+
+  // Close modal on background click
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Enter key for login
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  checkAuth();
+</script>
+</body>
+</html>
