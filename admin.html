@@ -757,6 +757,7 @@
   function handleFileSelect(input) {
     const file = input.files[0];
     if (!file) return;
+    if (file.size > 1024 * 1024) { alert('Image must be under 1MB.'); input.value = ''; return; }
     selectedFile = file;
     const reader = new FileReader();
     reader.onload = e => {
@@ -796,6 +797,7 @@
   function handleEditFileSelect(input) {
     const file = input.files[0];
     if (!file) return;
+    if (file.size > 1024 * 1024) { alert('Image must be under 1MB.'); input.value = ''; return; }
     editSelectedFile = file;
     const reader = new FileReader();
     reader.onload = e => {
