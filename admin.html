@@ -532,8 +532,16 @@
       <textarea id="e_synopsis" rows="3"></textarea>
     </div>
     <div class="form-group">
-      <label>MAL Poster URL</label>
-      <input type="url" id="e_poster_url" />
+      <label>Poster Image</label>
+      <div id="e_posterPreview" style="margin-bottom:10px"></div>
+      <input type="url" id="e_poster_url" placeholder="https://cdn.myanimelist.net/images/anime/…" oninput="previewEditPoster(this.value)" />
+      <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+        <label style="cursor:pointer;color:var(--accent);font-size:0.85rem;font-weight:600">
+          ↑ Upload new image
+          <input type="file" id="e_posterFile" accept="image/*" style="display:none" onchange="handleEditFileSelect(this)" />
+        </label>
+        <span style="color:var(--text-muted);font-size:0.8rem">or paste URL above</span>
+      </div>
     </div>
     <div class="form-group">
       <label>Dubbed Languages</label>
@@ -774,6 +782,28 @@
     }
   });
 
+  let editSelectedFile = null;
+
+  function previewEditPoster(url) {
+    const preview = document.getElementById('e_posterPreview');
+    if (url) {
+      preview.innerHTML = `<img src="${url}" style="width:80px;height:110px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" onerror="this.style.display='none'" />`;
+    } else {
+      preview.innerHTML = '';
+    }
+  }
+
+  function handleEditFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    editSelectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('e_posterPreview').innerHTML = `<img src="${e.target.result}" style="width:80px;height:110px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />`;
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function uploadPoster(animeId) {
     if (!selectedFile) return null;
     const ext = selectedFile.name.split('.').pop();
@@ -937,6 +967,8 @@
       document.getElementById('e_dub_status').value = '';
     }
 
+    editSelectedFile = null;
+    previewEditPoster(data.poster_url || '');
     hideAlert(document.getElementById('editAlert'));
     document.getElementById('editModal').classList.add('open');
   }
@@ -959,6 +991,19 @@
       type: document.getElementById('e_type').value,
       status: document.getElementById('e_status').value,
     };
+
+    // Upload new poster if selected
+    if (editSelectedFile) {
+      try {
+        const ext = editSelectedFile.name.split('.').pop();
+        const path = `posters/${id}.${ext}`;
+        const { error: upErr } = await supabaseClient.storage.from('posters').upload(path, editSelectedFile, { upsert: true });
+        if (!upErr) {
+          const { data: urlData } = supabaseClient.storage.from('posters').getPublicUrl(path);
+          row.poster_url = urlData.publicUrl;
+        }
+      } catch(e) { console.error('Image upload failed:', e); }
+    }
 
     const { error } = await supabaseClient.from('anime').update(row).eq('id', id);
     if (error) { showAlert(alert, error.message, 'error'); return; }
