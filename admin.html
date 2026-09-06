@@ -996,15 +996,16 @@
 
     // Upload new poster if selected
     if (editSelectedFile) {
-      try {
-        const ext = editSelectedFile.name.split('.').pop();
-        const path = `posters/${id}.${ext}`;
-        const { error: upErr } = await supabaseClient.storage.from('posters').upload(path, editSelectedFile, { upsert: true });
-        if (!upErr) {
-          const { data: urlData } = supabaseClient.storage.from('posters').getPublicUrl(path);
-          row.poster_url = urlData.publicUrl;
-        }
-      } catch(e) { console.error('Image upload failed:', e); }
+      const ext = editSelectedFile.name.split('.').pop();
+      const path = `posters/${id}.${ext}`;
+      const { error: upErr } = await supabaseClient.storage.from('posters').upload(path, editSelectedFile, { upsert: true });
+      if (upErr) {
+        showAlert(alert, 'Image upload failed: ' + upErr.message, 'error');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        return;
+      }
+      const { data: urlData } = supabaseClient.storage.from('posters').getPublicUrl(path);
+      row.poster_url = urlData.publicUrl;
     }
 
     const { error } = await supabaseClient.from('anime').update(row).eq('id', id);
