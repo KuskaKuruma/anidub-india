@@ -534,6 +534,38 @@
       <label>MAL Poster URL</label>
       <input type="url" id="e_poster_url" />
     </div>
+    <div class="form-group">
+      <label>Dubbed Languages</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px" id="e_dubLangGrid">
+        <label style="cursor:pointer"><input type="checkbox" class="e-dub-lang-check" value="Tamil" style="display:none"/><span class="genre-chip">Tamil</span></label>
+        <label style="cursor:pointer"><input type="checkbox" class="e-dub-lang-check" value="Telugu" style="display:none"/><span class="genre-chip">Telugu</span></label>
+        <label style="cursor:pointer"><input type="checkbox" class="e-dub-lang-check" value="Hindi" style="display:none"/><span class="genre-chip">Hindi</span></label>
+        <label style="cursor:pointer"><input type="checkbox" class="e-dub-lang-check" value="Malayalam" style="display:none"/><span class="genre-chip">Malayalam</span></label>
+        <label style="cursor:pointer"><input type="checkbox" class="e-dub-lang-check" value="Kannada" style="display:none"/><span class="genre-chip">Kannada</span></label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label>Platform</label>
+          <select id="e_dub_platform" class="admin-input">
+            <option value="">— Select —</option>
+            <option>Crunchyroll</option><option>Netflix</option>
+            <option>Disney+ Hotstar</option><option>Amazon Prime Video</option>
+            <option>Sony LIV</option><option>Zee5</option><option>JioCinema</option>
+            <option>Muse India (YouTube)</option><option>YouTube (other)</option><option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label>Dub Status</label>
+          <select id="e_dub_status" class="admin-input">
+            <option value="">— Select —</option>
+            <option value="Complete">Complete</option>
+            <option value="Partial">Partial</option>
+            <option value="Ongoing">Ongoing</option>
+          </select>
+        </div>
+      </div>
+      <small style="color:var(--text-muted);margin-top:6px;display:block">Checked = already dubbed. Adding new languages inserts new dub entries.</small>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" onclick="deleteAnime()">Delete</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
@@ -890,6 +922,20 @@
     document.getElementById('e_poster_url').value = data.poster_url || '';
     document.getElementById('e_type').value = data.type;
     document.getElementById('e_status').value = data.status;
+
+    // Load existing dubs and pre-check languages
+    const { data: dubs } = await supabaseClient.from('dubs').select('language, platform, status').eq('anime_id', id);
+    const existingLangs = new Set((dubs || []).map(d => d.language));
+    document.querySelectorAll('.e-dub-lang-check').forEach(c => { c.checked = existingLangs.has(c.value); });
+    // Pre-fill platform/status from first dub if available
+    if (dubs && dubs.length) {
+      document.getElementById('e_dub_platform').value = dubs[0].platform || '';
+      document.getElementById('e_dub_status').value = dubs[0].status || '';
+    } else {
+      document.getElementById('e_dub_platform').value = '';
+      document.getElementById('e_dub_status').value = '';
+    }
+
     hideAlert(document.getElementById('editAlert'));
     document.getElementById('editModal').classList.add('open');
   }
@@ -915,6 +961,21 @@
 
     const { error } = await supabaseClient.from('anime').update(row).eq('id', id);
     if (error) { showAlert(alert, error.message, 'error'); return; }
+
+    // Add dub entries for newly checked languages
+    const selectedLangs = [...document.querySelectorAll('.e-dub-lang-check:checked')].map(c => c.value);
+    const platform = document.getElementById('e_dub_platform').value;
+    const dubStatus = document.getElementById('e_dub_status').value;
+    if (selectedLangs.length && platform) {
+      const { data: existing } = await supabaseClient.from('dubs').select('language').eq('anime_id', id);
+      const existingLangs = new Set((existing || []).map(d => d.language));
+      const newLangs = selectedLangs.filter(l => !existingLangs.has(l));
+      if (newLangs.length) {
+        const { data: season } = await supabaseClient.from('seasons').select('id').eq('anime_id', id).limit(1).single();
+        const dubRows = newLangs.map(lang => ({ anime_id: id, season_id: season?.id || null, language: lang, platform, status: dubStatus || null }));
+        await supabaseClient.from('dubs').insert(dubRows);
+      }
+    }
 
     showAlert(alert, 'Updated successfully!', 'success');
     await loadAnimeList();
