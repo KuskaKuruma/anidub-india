@@ -771,7 +771,7 @@
 
     const row = {
       title,
-      title_jp: document.getElementById('a_title_jp').value.trim() || null,
+      japanese_title: document.getElementById('a_title_jp').value.trim() || null,
       mal_id: parseInt(document.getElementById('a_mal_id').value) || null,
       type: document.getElementById('a_type').value,
       status: document.getElementById('a_status').value,
@@ -842,7 +842,7 @@
     const alert = document.getElementById('editAlert');
     const row = {
       title: document.getElementById('e_title').value.trim(),
-      title_jp: document.getElementById('e_title_jp').value.trim() || null,
+      japanese_title: document.getElementById('e_title_jp').value.trim() || null,
       year: parseInt(document.getElementById('e_year').value),
       total_episodes: parseInt(document.getElementById('e_episodes').value) || 0,
       synopsis: document.getElementById('e_synopsis').value.trim() || null,
