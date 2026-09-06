@@ -265,7 +265,7 @@
           <td>${platformUrls[d.platform]
             ? `<a class="platform-link" href="${platformUrls[d.platform]}" target="_blank" rel="noopener">${d.platform} ↗</a>`
             : d.platform}</td>
-          <td><span class="status-badge ${statusClass(d.dub_status)}">${d.dub_status}</span></td>
+          <td><span class="status-badge ${statusClass(d.dub_status)}">${d.dub_status || '—'}</span></td>
           <td>${d.episodes_dubbed || '—'}</td>
           <td style="color:var(--text-muted)">${d.notes || '—'}</td>
         </tr>`).join('')}
