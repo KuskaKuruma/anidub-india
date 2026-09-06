@@ -199,8 +199,17 @@
     }
     .anime-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1280px) {
+      .anime-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .anime-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .anime-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     }
     .anime-card {
       background: var(--surface);
@@ -531,7 +540,7 @@
 <script src="data/seed.js"></script>
 <script src="supabase-config.js"></script>
 <script>
-  const PAGE_SIZE = 24;
+  const PAGE_SIZE = 24; // divisible by 6,4,3,2 — no orphan last row
   let currentPage = 1;
   let currentLang = 'All';
   let currentGenre = '';
