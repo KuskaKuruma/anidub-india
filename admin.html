@@ -249,6 +249,10 @@
         <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Dub</button>
         <button class="sidebar-btn" onclick="showPanel('listDubs')">Browse Dubs</button>
       </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Community</div>
+        <button class="sidebar-btn" onclick="showPanel('submissions')" id="subBtn">Submissions <span id="subBadge"></span></button>
+      </div>
     </aside>
 
     <!-- Main -->
@@ -436,6 +440,11 @@
         </div>
       </div>
 
+      <div class="panel" id="panel-submissions">
+        <div class="panel-title">Community Submissions</div>
+        <div id="subsWrap"><p style="color:var(--text-muted)">Loading…</p></div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -557,6 +566,59 @@
   }
   function hideAlert(el) { el.className = 'alert'; }
 
+  async function loadSubmissions() {
+    const wrap = document.getElementById('subsWrap');
+    wrap.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+    const { data, error } = await supabaseClient.from('submissions')
+      .select('*').order('created_at', { ascending: false });
+    if (error) { wrap.innerHTML = `<p style="color:var(--red)">${error.message}</p>`; return; }
+    if (!data.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No submissions yet.</p>'; return; }
+
+    const pending = data.filter(s => s.review_status === 'pending');
+    const rest    = data.filter(s => s.review_status !== 'pending');
+    document.getElementById('subBadge').textContent = pending.length ? `(${pending.length})` : '';
+
+    const renderCard = s => {
+      const langs = Array.isArray(s.languages) ? s.languages.join(', ') : s.languages;
+      const date  = new Date(s.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+      const statusColor = s.review_status === 'approved' ? 'var(--green)' : s.review_status === 'rejected' ? 'var(--red)' : 'var(--accent)';
+      return `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;font-size:1rem">${s.anime_title}</div>
+            <div style="color:var(--text-muted);font-size:0.82rem;margin-top:3px">${date}${s.submitter_name ? ' · ' + s.submitter_name : ''}${s.submitter_email ? ' · ' + s.submitter_email : ''}</div>
+          </div>
+          <span style="font-size:0.75rem;font-weight:700;color:${statusColor};text-transform:uppercase;white-space:nowrap">${s.review_status}</span>
+        </div>
+        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:0.85rem;">
+          ${s.season ? `<div><span style="color:var(--text-muted)">Season:</span> ${s.season}</div>` : ''}
+          ${s.year   ? `<div><span style="color:var(--text-muted)">Year:</span> ${s.year}</div>` : ''}
+          ${langs    ? `<div><span style="color:var(--text-muted)">Languages:</span> ${langs}</div>` : ''}
+          ${s.platform  ? `<div><span style="color:var(--text-muted)">Platform:</span> ${s.platform}</div>` : ''}
+          ${s.dub_status? `<div><span style="color:var(--text-muted)">Status:</span> ${s.dub_status}</div>` : ''}
+          ${s.episodes_dubbed ? `<div><span style="color:var(--text-muted)">Episodes:</span> ${s.episodes_dubbed}</div>` : ''}
+          ${s.mal_url   ? `<div><a href="${s.mal_url}" target="_blank" style="color:var(--accent)">MAL Link ↗</a></div>` : ''}
+          ${s.stream_url? `<div><a href="${s.stream_url}" target="_blank" style="color:var(--accent)">Stream Link ↗</a></div>` : ''}
+        </div>
+        ${s.notes ? `<div style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px">${s.notes}</div>` : ''}
+        ${s.review_status === 'pending' ? `
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button onclick="updateSubmission(${s.id},'approved')" style="padding:7px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Approve</button>
+          <button onclick="updateSubmission(${s.id},'rejected')" style="padding:7px 20px;background:var(--red);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Reject</button>
+        </div>` : ''}
+      </div>`;
+    };
+
+    wrap.innerHTML = (pending.length ? `<div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Pending (${pending.length})</div>` + pending.map(renderCard).join('') : '') +
+      (rest.length ? `<div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin:18px 0 10px">Reviewed</div>` + rest.map(renderCard).join('') : '');
+  }
+
+  async function updateSubmission(id, status) {
+    await supabaseClient.from('submissions').update({ review_status: status }).eq('id', id);
+    loadSubmissions();
+  }
+
   function showPanel(name) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -566,6 +628,7 @@
     if (name === 'listAnime') renderAnimeList(animeCache);
     if (name === 'addSeason' || name === 'addDub') populateAnimeSelects();
     if (name === 'listDubs') loadDubsList();
+    if (name === 'submissions') loadSubmissions();
   }
 
   function setTodayDate() {
