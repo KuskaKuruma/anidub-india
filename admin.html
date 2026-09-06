@@ -602,11 +602,15 @@
           ${s.stream_url? `<div><a href="${s.stream_url}" target="_blank" style="color:var(--accent)">Stream Link ↗</a></div>` : ''}
         </div>
         ${s.notes ? `<div style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px">${s.notes}</div>` : ''}
-        ${s.review_status === 'pending' ? `
-        <div style="margin-top:14px;display:flex;gap:10px">
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          ${s.review_status === 'pending' ? `
           <button onclick="updateSubmission(${s.id},'approved')" style="padding:7px 20px;background:var(--green);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Approve</button>
           <button onclick="updateSubmission(${s.id},'rejected')" style="padding:7px 20px;background:var(--red);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Reject</button>
-        </div>` : ''}
+          ` : ''}
+          ${s.review_status === 'approved' ? `
+          <button onclick="prefillFromSubmission(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">→ Add to Database</button>
+          ` : ''}
+        </div>
       </div>`;
     };
 
@@ -617,6 +621,25 @@
   async function updateSubmission(id, status) {
     await supabaseClient.from('submissions').update({ review_status: status }).eq('id', id);
     loadSubmissions();
+  }
+
+  function prefillFromSubmission(s) {
+    showPanel('addAnime');
+    document.getElementById('animeTitle').value = s.anime_title || '';
+    if (s.year) document.getElementById('animeYear').value = s.year;
+    if (s.mal_url) {
+      const match = s.mal_url.match(/anime\/(\d+)/);
+      if (match) document.getElementById('animeMalId').value = match[1];
+    }
+    // Scroll to top of form
+    document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+    // Show a note
+    const note = document.createElement('div');
+    note.style.cssText = 'background:rgba(34,197,94,0.1);border:1px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:0.88rem;color:var(--green)';
+    note.innerHTML = `Pre-filled from submission. Fill in the remaining fields (genre, synopsis, etc.) and save.`;
+    const form = document.getElementById('panel-addAnime').querySelector('form') || document.getElementById('panel-addAnime');
+    form.prepend(note);
+    setTimeout(() => note.remove(), 6000);
   }
 
   function showPanel(name) {
