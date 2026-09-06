@@ -369,16 +369,15 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script>
-  const FORMSPREE_ID = 'YOUR_FORMSPREE_ID'; // Replace with your Formspree form ID after signing up at formspree.io
-
   document.getElementById('submitForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const errorEl = document.getElementById('formError');
     errorEl.classList.remove('show');
 
-    // Validate required fields
     const title = document.getElementById('anime_title').value.trim();
     const langs = [...document.querySelectorAll('[name=languages]:checked')].map(c => c.value);
     const platform = document.querySelector('[name=platform]').value;
@@ -393,32 +392,46 @@
     btn.disabled = true;
     btn.textContent = 'Submitting…';
 
-    // Build form data
-    const data = new FormData(this);
-    data.set('languages', langs.join(', '));
+    const payload = {
+      anime_title:      title,
+      season:           document.querySelector('[name=season]').value.trim() || null,
+      year:             document.querySelector('[name=year]').value.trim() || null,
+      mal_url:          document.querySelector('[name=mal_url]').value.trim() || null,
+      languages:        langs,
+      platform:         platform,
+      dub_status:       status,
+      episodes_dubbed:  document.querySelector('[name=episodes_dubbed]').value.trim() || null,
+      stream_url:       document.querySelector('[name=stream_url]').value.trim() || null,
+      notes:            document.querySelector('[name=notes]').value.trim() || null,
+      submitter_name:   document.querySelector('[name=submitter_name]').value.trim() || null,
+      submitter_email:  document.querySelector('[name=submitter_email]').value.trim() || null,
+      review_status:    'pending',
+    };
 
-    // Try Formspree if configured, else fall back to success screen directly
-    if (FORMSPREE_ID !== 'YOUR_FORMSPREE_ID') {
-      try {
-        const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
-          method: 'POST',
-          body: data,
-          headers: { 'Accept': 'application/json' },
-        });
-        if (!res.ok) throw new Error();
-      } catch {
-        btn.disabled = false;
-        btn.textContent = 'Submit for Review';
-        showError('Something went wrong. Please try again or contact us directly.');
-        return;
-      }
+    if (window.DEMO_MODE) {
+      // Demo mode — just show success without saving
+      showSuccess();
+      return;
     }
 
-    // Show success
+    const { error } = await window.supabaseClient.from('submissions').insert(payload);
+
+    if (error) {
+      btn.disabled = false;
+      btn.textContent = 'Submit for Review';
+      showError('Something went wrong. Please try again.');
+      console.error(error);
+      return;
+    }
+
+    showSuccess();
+  });
+
+  function showSuccess() {
     document.getElementById('formWrap').style.display = 'none';
     document.getElementById('successScreen').classList.add('show');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  }
 
   function showError(msg) {
     const el = document.getElementById('formError');
