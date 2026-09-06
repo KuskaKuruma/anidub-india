@@ -505,7 +505,7 @@
 
   // ── Auth ──
   async function checkAuth() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) showAdmin();
   }
 
@@ -519,7 +519,7 @@
     btn.textContent = 'Signing in…';
     hideAlert(alert);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     btn.disabled = false;
     btn.textContent = 'Sign In';
 
@@ -531,7 +531,7 @@
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     document.getElementById('adminApp').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('logoutBtn').style.display = 'none';
@@ -621,7 +621,7 @@
     if (!selectedFile) return null;
     const ext = selectedFile.name.split('.').pop();
     const path = `posters/${animeId}.${ext}`;
-    const { error } = await supabase.storage
+    const { error } = await supabaseClient.storage
       .from('posters').upload(path, selectedFile, { upsert: true });
     if (error) throw error;
     return path;
@@ -629,7 +629,7 @@
 
   // ── Load anime list ──
   async function loadAnimeList() {
-    const { data } = await supabase.from('anime').select('id, title, type, year, status').order('title');
+    const { data } = await supabaseClient.from('anime').select('id, title, type, year, status').order('title');
     animeCache = data || [];
   }
 
@@ -697,7 +697,7 @@
       genre: genres,
     };
 
-    const { data, error } = await supabase.from('anime').insert(row).select().single();
+    const { data, error } = await supabaseClient.from('anime').insert(row).select().single();
     if (error) {
       showAlert(alert, error.message, 'error');
       btn.disabled = false; btn.textContent = 'Save Anime';
@@ -708,7 +708,7 @@
     if (selectedFile) {
       try {
         const path = await uploadPoster(data.id);
-        await supabase.from('anime').update({ poster_path: path }).eq('id', data.id);
+        await supabaseClient.from('anime').update({ poster_path: path }).eq('id', data.id);
       } catch (e) {
         console.error('Image upload failed:', e);
       }
@@ -730,7 +730,7 @@
 
   // ── Edit Anime ──
   async function openEditModal(id) {
-    const { data, error } = await supabase.from('anime').select('*').eq('id', id).single();
+    const { data, error } = await supabaseClient.from('anime').select('*').eq('id', id).single();
     if (error || !data) return;
 
     editingId = id;
@@ -766,7 +766,7 @@
       status: document.getElementById('e_status').value,
     };
 
-    const { error } = await supabase.from('anime').update(row).eq('id', id);
+    const { error } = await supabaseClient.from('anime').update(row).eq('id', id);
     if (error) { showAlert(alert, error.message, 'error'); return; }
 
     showAlert(alert, 'Updated successfully!', 'success');
@@ -778,9 +778,9 @@
   async function deleteAnime() {
     if (!confirm('Delete this anime and all its seasons/dubs? This cannot be undone.')) return;
     const id = editingId;
-    await supabase.from('dubs').delete().eq('anime_id', id);
-    await supabase.from('seasons').delete().eq('anime_id', id);
-    const { error } = await supabase.from('anime').delete().eq('id', id);
+    await supabaseClient.from('dubs').delete().eq('anime_id', id);
+    await supabaseClient.from('seasons').delete().eq('anime_id', id);
+    const { error } = await supabaseClient.from('anime').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     closeModal();
     await loadAnimeList();
@@ -805,7 +805,7 @@
       episodes_end: parseInt(document.getElementById('s_ep_end').value) || null,
     };
 
-    const { error } = await supabase.from('seasons').insert(row);
+    const { error } = await supabaseClient.from('seasons').insert(row);
     if (error) { showAlert(alert, error.message, 'error'); return; }
     showAlert(alert, 'Season added!', 'success');
     ['s_number','s_title','s_ep_start','s_ep_end'].forEach(id => document.getElementById(id).value = '');
@@ -817,7 +817,7 @@
     const sel = document.getElementById('d_season_id');
     sel.innerHTML = '<option value="">Whole anime / all seasons</option>';
     if (!animeId) return;
-    const { data } = await supabase.from('seasons').select('*').eq('anime_id', animeId).order('season_number');
+    const { data } = await supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number');
     (data || []).forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.id;
@@ -848,7 +848,7 @@
       notes: document.getElementById('d_notes').value.trim() || null,
     };
 
-    const { error } = await supabase.from('dubs').insert(row);
+    const { error } = await supabaseClient.from('dubs').insert(row);
     if (error) { showAlert(alert, error.message, 'error'); return; }
     showAlert(alert, `${language} dub on ${platform} added!`, 'success');
     ['d_episodes','d_notes'].forEach(id => document.getElementById(id).value = '');
@@ -886,7 +886,7 @@
 
   async function deleteDub(id) {
     if (!confirm('Remove this dub record?')) return;
-    const { error } = await supabase.from('dubs').delete().eq('id', id);
+    const { error } = await supabaseClient.from('dubs').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     loadDubsList();
   }
