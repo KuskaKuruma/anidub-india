@@ -134,6 +134,7 @@
       background: var(--surface2); color: var(--text-muted); font-size: 0.82rem;
       cursor: pointer; transition: all 0.2s; user-select: none;
     }
+    .dub-lang-check:checked + .genre-chip,
     .genre-check:checked + .genre-chip {
       background: var(--accent); border-color: var(--accent); color: #fff;
     }
@@ -322,6 +323,44 @@
               <div id="posterPreview"></div>
             </div>
             <input type="file" id="posterFile" accept="image/*" style="display:none" onchange="handleFileSelect(this)" />
+          </div>
+          <div class="form-group">
+            <label>Dubbed Languages</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" id="dubLangGrid">
+              <label style="cursor:pointer"><input type="checkbox" class="dub-lang-check" value="Tamil" style="display:none"/><span class="genre-chip">Tamil</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="dub-lang-check" value="Telugu" style="display:none"/><span class="genre-chip">Telugu</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="dub-lang-check" value="Hindi" style="display:none"/><span class="genre-chip">Hindi</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="dub-lang-check" value="Malayalam" style="display:none"/><span class="genre-chip">Malayalam</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="dub-lang-check" value="Kannada" style="display:none"/><span class="genre-chip">Kannada</span></label>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label>Platform</label>
+                <select id="a_dub_platform" class="admin-input">
+                  <option value="">— Select —</option>
+                  <option>Crunchyroll</option>
+                  <option>Netflix</option>
+                  <option>Disney+ Hotstar</option>
+                  <option>Amazon Prime Video</option>
+                  <option>Sony LIV</option>
+                  <option>Zee5</option>
+                  <option>JioCinema</option>
+                  <option>Muse India (YouTube)</option>
+                  <option>YouTube (other)</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label>Dub Status</label>
+                <select id="a_dub_status" class="admin-input">
+                  <option value="">— Select —</option>
+                  <option value="Complete">Complete</option>
+                  <option value="Partial">Partial</option>
+                  <option value="Ongoing">Ongoing</option>
+                </select>
+              </div>
+            </div>
+            <small style="color:var(--text-muted);margin-top:6px;display:block">Select all languages available on this platform. You can add more platforms later via Add Dub.</small>
           </div>
           <div style="display:flex;gap:12px">
             <button class="btn btn-primary" id="saveAnimeBtn" onclick="saveAnime()">Save Anime</button>
@@ -799,6 +838,26 @@
       }
     }
 
+    // Create default Season 1 and dub entries for selected languages
+    const { data: season } = await supabaseClient.from('seasons')
+      .insert({ anime_id: data.id, season_number: 1, season_name: 'Season 1' })
+      .select().single();
+
+    const selectedLangs = [...document.querySelectorAll('.dub-lang-check:checked')].map(c => c.value);
+    const dubPlatform = document.getElementById('a_dub_platform').value;
+    const dubStatus   = document.getElementById('a_dub_status').value;
+
+    if (selectedLangs.length && dubPlatform && season) {
+      const dubRows = selectedLangs.map(lang => ({
+        anime_id:  data.id,
+        season_id: season.id,
+        language:  lang,
+        platform:  dubPlatform,
+        status:    dubStatus || null,
+      }));
+      await supabaseClient.from('dubs').insert(dubRows);
+    }
+
     showAlert(alert, `"${title}" saved successfully!`, 'success');
     clearAnimeForm();
     btn.disabled = false; btn.textContent = 'Save Anime';
@@ -809,6 +868,9 @@
     ['a_title','a_title_jp','a_mal_id','a_poster_url','a_synopsis','a_year','a_episodes']
       .forEach(id => { document.getElementById(id).value = ''; });
     document.querySelectorAll('.genre-check').forEach(c => c.checked = false);
+    document.querySelectorAll('.dub-lang-check').forEach(c => { c.checked = false; c.nextElementSibling.style.background = ''; c.nextElementSibling.style.color = ''; c.nextElementSibling.style.borderColor = ''; });
+    document.getElementById('a_dub_platform').value = '';
+    document.getElementById('a_dub_status').value = '';
     selectedFile = null;
     document.getElementById('posterPreview').innerHTML = '';
   }
