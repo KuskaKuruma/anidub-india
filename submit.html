@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit Anime — AniDub India</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2c;
+      --border: #2a2a3d;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --green: #22c55e;
+      --red: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,20,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+      padding: 0 24px; height: 60px;
+    }
+    .nav-logo { font-size: 1.25rem; font-weight: 700; color: var(--accent); text-decoration: none; }
+    .nav-logo span { color: var(--text); }
+    .nav-links { display: flex; gap: 20px; margin-left: auto; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── Page layout ── */
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    .page-header { margin-bottom: 36px; }
+    .page-header h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+    .page-header p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+
+    /* ── Section cards ── */
+    .form-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .form-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form elements ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 7px;
+    }
+    label .req { color: var(--accent); margin-left: 2px; }
+
+    input[type=text], input[type=email], input[type=url],
+    select, textarea {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--text-muted); }
+    select option { background: var(--surface2); }
+    textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* ── Language checkboxes ── */
+    .lang-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .lang-check { display: none; }
+    .lang-chip {
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .lang-check:checked + .lang-chip {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Hint text ── */
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    /* ── Info banner ── */
+    .info-banner {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: rgba(124,58,237,0.08);
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 28px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .info-banner svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+
+    /* ── Submit button ── */
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+    .submit-btn:hover { background: var(--accent-hover); }
+    .submit-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* ── Success state ── */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .success-screen.show { display: block; }
+    .success-icon {
+      width: 64px; height: 64px;
+      background: rgba(34,197,94,0.15);
+      border: 2px solid var(--green);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-screen h2 { font-size: 1.5rem; margin-bottom: 10px; }
+    .success-screen p { color: var(--text-muted); margin-bottom: 28px; line-height: 1.6; }
+    .back-btn {
+      display: inline-block;
+      padding: 10px 24px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: var(--accent-hover); }
+
+    /* ── Error ── */
+    .form-error {
+      display: none;
+      padding: 12px 16px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+    }
+    .form-error.show { display: block; }
+
+    @media (max-width: 600px) {
+      .page { padding: 32px 16px 60px; }
+      nav { padding: 0 16px; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
+  <div class="nav-links">
+    <a href="index.html">Browse</a>
+    <a href="submit.html" style="color:var(--text)">Submit Anime</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Success screen (shown after submit) -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">
+      <svg width="28" height="28" fill="none" stroke="#22c55e" stroke-width="2.5" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>Submission Received!</h2>
+    <p>Thank you for contributing to AniDub India.<br>We'll review your submission and add it to the database soon.</p>
+    <a class="back-btn" href="index.html">← Back to Browse</a>
+    <br><br>
+    <a href="submit.html" style="color:var(--accent);font-size:0.9rem">Submit another</a>
+  </div>
+
+  <!-- Form -->
+  <div id="formWrap">
+    <div class="page-header">
+      <h1>Submit an Anime or Dub</h1>
+      <p>Know about an Indian language dub that's missing from our directory? Fill in the details below and we'll review and add it.</p>
+    </div>
+
+    <div class="info-banner">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>All fields marked <strong style="color:var(--accent)">*</strong> are required. Submissions are reviewed manually — usually within 1–2 days.</span>
+    </div>
+
+    <div id="formError" class="form-error"></div>
+
+    <form id="submitForm" novalidate>
+
+      <!-- Section 1: Anime Info -->
+      <div class="form-section">
+        <div class="form-section-title">Anime Information</div>
+
+        <div class="form-group">
+          <label>Anime Title <span class="req">*</span></label>
+          <input type="text" name="anime_title" id="anime_title" placeholder="e.g. Jujutsu Kaisen" />
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Season / Arc</label>
+            <input type="text" name="season" placeholder="e.g. Season 2, Mugen Train Arc" />
+          </div>
+          <div class="form-group">
+            <label>Year (approx.)</label>
+            <input type="text" name="year" placeholder="e.g. 2023" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>MyAnimeList URL</label>
+          <input type="url" name="mal_url" placeholder="https://myanimelist.net/anime/…" />
+          <p class="hint">Helps us confirm the anime details. Not required but speeds up review.</p>
+        </div>
+      </div>
+
+      <!-- Section 2: Dub Info -->
+      <div class="form-section">
+        <div class="form-section-title">Dub Details</div>
+
+        <div class="form-group">
+          <label>Dubbed Language(s) <span class="req">*</span></label>
+          <div class="lang-grid" id="langGrid">
+            <label><input type="checkbox" class="lang-check" name="languages" value="Tamil" /><span class="lang-chip">Tamil</span></label>
+            <label><input type="checkbox" class="lang-check" name="languages" value="Telugu" /><span class="lang-chip">Telugu</span></label>
+            <label><input type="checkbox" class="lang-check" name="languages" value="Hindi" /><span class="lang-chip">Hindi</span></label>
+            <label><input type="checkbox" class="lang-check" name="languages" value="Malayalam" /><span class="lang-chip">Malayalam</span></label>
+            <label><input type="checkbox" class="lang-check" name="languages" value="Kannada" /><span class="lang-chip">Kannada</span></label>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Streaming Platform <span class="req">*</span></label>
+            <select name="platform">
+              <option value="">— Select platform —</option>
+              <option>Crunchyroll</option>
+              <option>Netflix</option>
+              <option>Disney+ Hotstar</option>
+              <option>Amazon Prime Video</option>
+              <option>Sony LIV</option>
+              <option>Zee5</option>
+              <option>JioCinema</option>
+              <option>Muse India (YouTube)</option>
+              <option>YouTube (other)</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dub Status <span class="req">*</span></label>
+            <select name="dub_status">
+              <option value="">— Select status —</option>
+              <option value="Complete">Complete — fully dubbed</option>
+              <option value="Partial">Partial — only some episodes</option>
+              <option value="Ongoing">Ongoing — still airing</option>
+              <option value="Removed">Removed — no longer available</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Episodes Dubbed (if partial)</label>
+          <input type="text" name="episodes_dubbed" placeholder="e.g. Ep 1–24, or Season 1 only" />
+        </div>
+
+        <div class="form-group">
+          <label>Platform / Stream Link</label>
+          <input type="url" name="stream_url" placeholder="https://www.crunchyroll.com/…" />
+          <p class="hint">Direct link to the dubbed anime on the platform, if you have it.</p>
+        </div>
+      </div>
+
+      <!-- Section 3: Additional Info -->
+      <div class="form-section">
+        <div class="form-section-title">Additional Notes</div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea name="notes" placeholder="Anything else we should know — e.g. re-dub, different from original dub, audio quality issues, etc."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Your Name (optional)</label>
+          <input type="text" name="submitter_name" placeholder="How you'd like to be credited (optional)" />
+        </div>
+
+        <div class="form-group">
+          <label>Your Email (optional)</label>
+          <input type="email" name="submitter_email" placeholder="In case we need to follow up" />
+          <p class="hint">We'll never share your email publicly.</p>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Submit for Review</button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  const FORMSPREE_ID = 'YOUR_FORMSPREE_ID'; // Replace with your Formspree form ID after signing up at formspree.io
+
+  document.getElementById('submitForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const errorEl = document.getElementById('formError');
+    errorEl.classList.remove('show');
+
+    // Validate required fields
+    const title = document.getElementById('anime_title').value.trim();
+    const langs = [...document.querySelectorAll('[name=languages]:checked')].map(c => c.value);
+    const platform = document.querySelector('[name=platform]').value;
+    const status = document.querySelector('[name=dub_status]').value;
+
+    if (!title) { showError('Please enter the anime title.'); return; }
+    if (!langs.length) { showError('Please select at least one dubbed language.'); return; }
+    if (!platform) { showError('Please select the streaming platform.'); return; }
+    if (!status) { showError('Please select the dub status.'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    // Build form data
+    const data = new FormData(this);
+    data.set('languages', langs.join(', '));
+
+    // Try Formspree if configured, else fall back to success screen directly
+    if (FORMSPREE_ID !== 'YOUR_FORMSPREE_ID') {
+      try {
+        const res = await fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+          method: 'POST',
+          body: data,
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!res.ok) throw new Error();
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Submit for Review';
+        showError('Something went wrong. Please try again or contact us directly.');
+        return;
+      }
+    }
+
+    // Show success
+    document.getElementById('formWrap').style.display = 'none';
+    document.getElementById('successScreen').classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  function showError(msg) {
+    const el = document.getElementById('formError');
+    el.textContent = msg;
+    el.classList.add('show');
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
+</body>
+</html>

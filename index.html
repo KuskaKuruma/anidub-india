@@ -64,6 +64,7 @@
       transition: color 0.2s;
     }
     .nav-links a:hover { color: var(--text); }
+    .nav-links a.admin-link { display: none; }
 
     /* ── Hero ── */
     .hero {
@@ -124,9 +125,14 @@
       margin: 0 auto 32px;
       padding: 0 24px;
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 12px;
+    }
+    .filter-row {
+      display: flex;
       align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .filter-label {
@@ -135,10 +141,11 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       align-self: center;
-      margin-right: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .chip {
-      padding: 6px 14px;
+      padding: 6px 16px;
       border-radius: 20px;
       border: 1px solid var(--border);
       background: var(--surface);
@@ -154,7 +161,7 @@
       border-color: var(--accent);
       color: #fff;
     }
-    .divider { width: 1px; height: 28px; background: var(--border); }
+    .divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
     select.filter-select {
       padding: 6px 14px;
       border-radius: 20px;
@@ -380,11 +387,15 @@
     footer a { color: var(--accent); text-decoration: none; }
 
     /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .divider { display: none; }
+    }
     @media (max-width: 600px) {
       :root { --card-w: 150px; }
       nav { padding: 0 16px; }
       .hero { padding: 40px 16px 28px; }
       .filters, .sort-bar, .grid-wrap, .section-title, .updates-list { padding: 0 16px; }
+      .filter-row { gap: 8px; }
     }
   </style>
 </head>
@@ -394,8 +405,8 @@
   <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
   <div class="nav-links">
     <a href="index.html">Browse</a>
-    <a href="https://forms.google.com" target="_blank" rel="noopener">Submit Anime</a>
-    <a href="admin.html">Admin</a>
+    <a href="submit.html">Submit Anime</a>
+    <a href="admin.html" class="admin-link">Admin</a>
   </div>
 </nav>
 
@@ -413,53 +424,58 @@
   </div>
 
   <div class="filters">
-    <span class="filter-label">Language</span>
-    <div class="filter-group" id="langFilters">
-      <button class="chip active" data-lang="All">All</button>
-      <button class="chip" data-lang="Tamil">Tamil</button>
-      <button class="chip" data-lang="Telugu">Telugu</button>
-      <button class="chip" data-lang="Hindi">Hindi</button>
-      <button class="chip" data-lang="Malayalam">Malayalam</button>
-      <button class="chip" data-lang="Kannada">Kannada</button>
+    <!-- Row 1: Language -->
+    <div class="filter-row">
+      <span class="filter-label">Language</span>
+      <div class="filter-group" id="langFilters">
+        <button class="chip active" data-lang="All">All</button>
+        <button class="chip" data-lang="Tamil">Tamil</button>
+        <button class="chip" data-lang="Telugu">Telugu</button>
+        <button class="chip" data-lang="Hindi">Hindi</button>
+        <button class="chip" data-lang="Malayalam">Malayalam</button>
+        <button class="chip" data-lang="Kannada">Kannada</button>
+      </div>
     </div>
-    <div class="divider"></div>
-    <span class="filter-label">Genre</span>
-    <select class="filter-select" id="genreFilter">
-      <option value="">All Genres</option>
-      <option>Action</option>
-      <option>Adventure</option>
-      <option>Comedy</option>
-      <option>Drama</option>
-      <option>Fantasy</option>
-      <option>Horror</option>
-      <option>Mecha</option>
-      <option>Mystery</option>
-      <option>Romance</option>
-      <option>Sci-Fi</option>
-      <option>Seinen</option>
-      <option>Shonen</option>
-      <option>Shoujo</option>
-      <option>Slice of Life</option>
-      <option>Sports</option>
-      <option>Supernatural</option>
-      <option>Thriller</option>
-    </select>
-    <div class="divider"></div>
-    <span class="filter-label">Type</span>
-    <select class="filter-select" id="typeFilter">
-      <option value="">All Types</option>
-      <option>TV</option>
-      <option>Movie</option>
-      <option>OVA</option>
-      <option>ONA</option>
-    </select>
-    <div class="divider"></div>
-    <span class="filter-label">Status</span>
-    <select class="filter-select" id="statusFilter">
-      <option value="">All</option>
-      <option>Ongoing</option>
-      <option>Completed</option>
-    </select>
+    <!-- Row 2: Genre / Type / Status -->
+    <div class="filter-row">
+      <span class="filter-label">Genre</span>
+      <select class="filter-select" id="genreFilter">
+        <option value="">All Genres</option>
+        <option>Action</option>
+        <option>Adventure</option>
+        <option>Comedy</option>
+        <option>Drama</option>
+        <option>Fantasy</option>
+        <option>Horror</option>
+        <option>Mecha</option>
+        <option>Mystery</option>
+        <option>Romance</option>
+        <option>Sci-Fi</option>
+        <option>Seinen</option>
+        <option>Shonen</option>
+        <option>Shoujo</option>
+        <option>Slice of Life</option>
+        <option>Sports</option>
+        <option>Supernatural</option>
+        <option>Thriller</option>
+      </select>
+      <div class="divider"></div>
+      <span class="filter-label">Type</span>
+      <select class="filter-select" id="typeFilter">
+        <option value="">All Types</option>
+        <option>TV</option>
+        <option>Movie</option>
+        <option>OVA</option>
+        <option>ONA</option>
+      </select>
+      <div class="divider"></div>
+      <span class="filter-label">Status</span>
+      <select class="filter-select" id="statusFilter">
+        <option value="">All</option>
+        <option>Ongoing</option>
+        <option>Completed</option>
+      </select>
+    </div>
   </div>
 
   <div class="sort-bar">
