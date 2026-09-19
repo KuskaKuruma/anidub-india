@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Schedule — AniDub India</title>
+  <meta name="description" content="Weekly anime airing schedule in Indian Standard Time (IST). See what episodes are releasing this week." />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2c;
+      --border: #2a2a3d;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --accent-soft: rgba(124,58,237,0.15);
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,13,20,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      height: 60px;
+    }
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-logo span { color: var(--text); }
+    .nav-links { display: flex; gap: 20px; margin-left: auto; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active { color: var(--accent); }
+
+    /* ── Page header ── */
+    .page-header {
+      padding: 32px 24px 0;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* ── Week nav ── */
+    .week-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 24px 0;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .week-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background 0.2s;
+    }
+    .week-btn:hover { background: var(--surface2); }
+    .week-range {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .today-btn {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background 0.2s;
+    }
+    .today-btn:hover { background: var(--accent); color: #fff; }
+
+    /* ── Main grid wrapper ── */
+    .schedule-wrapper {
+      padding: 20px 24px 60px;
+      max-width: 1400px;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+
+    /* ── 7-column week grid ── */
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(160px, 1fr));
+      gap: 8px;
+      min-width: 1120px;
+    }
+
+    /* Day colour palette – Mon→Sun */
+    :root {
+      --d0: #3b82f6; /* Mon – blue */
+      --d1: #a855f7; /* Tue – purple */
+      --d2: #10b981; /* Wed – emerald */
+      --d3: #f59e0b; /* Thu – amber */
+      --d4: #ef4444; /* Fri – red */
+      --d5: #ec4899; /* Sat – pink */
+      --d6: #06b6d4; /* Sun – cyan */
+    }
+    .day-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .day-col.today { box-shadow: 0 0 0 2px var(--day-color, var(--accent)); }
+    .day-col[data-day="0"] { --day-color: var(--d0); border-top: 3px solid var(--d0); }
+    .day-col[data-day="1"] { --day-color: var(--d1); border-top: 3px solid var(--d1); }
+    .day-col[data-day="2"] { --day-color: var(--d2); border-top: 3px solid var(--d2); }
+    .day-col[data-day="3"] { --day-color: var(--d3); border-top: 3px solid var(--d3); }
+    .day-col[data-day="4"] { --day-color: var(--d4); border-top: 3px solid var(--d4); }
+    .day-col[data-day="5"] { --day-color: var(--d5); border-top: 3px solid var(--d5); }
+    .day-col[data-day="6"] { --day-color: var(--d6); border-top: 3px solid var(--d6); }
+
+    .day-header {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: sticky;
+      top: 60px;
+      background: var(--surface);
+      z-index: 2;
+    }
+    .day-col.today .day-header { background: rgba(255,255,255,0.04); }
+
+    .day-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--day-color, var(--text-muted));
+    }
+
+    .day-date {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .day-col.today .day-date { color: var(--day-color, var(--accent)); }
+
+    .day-count {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .day-entries {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    /* ── Anime card ── */
+    .anime-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s;
+      text-decoration: none;
+      display: block;
+    }
+    .anime-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-poster {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      display: block;
+      background: var(--border);
+    }
+    .card-poster-placeholder {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      background: linear-gradient(160deg, #1e1e2c, #2a2a3d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .card-body {
+      padding: 8px;
+    }
+    .card-time {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-ep {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .card-dub-badge {
+      display: inline-block;
+      margin-top: 5px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: rgba(34,197,94,0.15);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.3);
+      padding: 1px 6px;
+      border-radius: 99px;
+    }
+
+    /* ── Empty day ── */
+    .day-empty {
+      padding: 24px 12px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    /* ── Loading / error states ── */
+    .state-box {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+    }
+    .state-box .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    @media (max-width: 600px) {
+      .page-header { padding: 20px 16px 0; }
+      .week-nav { padding: 14px 16px 0; }
+      .schedule-wrapper { padding: 16px 16px 40px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">AniDub<span> India</span></a>
+  <div class="nav-links">
+    <a href="index.html">Dub Library</a>
+    <a href="schedule.html" class="active">Airing Now</a>
+    <a href="submit.html">Add a Dub</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1>Weekly Anime Schedule</h1>
+  <p>All air times shown in Indian Standard Time (IST · UTC+5:30)</p>
+</div>
+
+<div class="week-nav">
+  <button class="week-btn" id="prevWeek">&#8592; Prev</button>
+  <button class="today-btn" id="goToday">This Week</button>
+  <button class="week-btn" id="nextWeek">Next &#8594;</button>
+  <span class="week-range" id="weekRange"></span>
+</div>
+
+
+<div class="schedule-wrapper">
+  <div class="week-grid" id="weekGrid">
+    <div class="state-box">
+      <div class="spinner"></div>
+      <p>Loading schedule…</p>
+    </div>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script>
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  /* ── Week offset (0 = current week) ── */
+  let weekOffset = 0;
+
+  /* ── Compute Mon–Sun bounds for a given week offset ── */
+  function getWeekBounds(offset) {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((day + 6) % 7) + offset * 7);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    return { monday, sunday };
+  }
+
+  /* ── Format IST time string from Unix timestamp ── */
+  function toIST(unixSec) {
+    const d = new Date(unixSec * 1000);
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  /* ── Get day index (0=Mon … 6=Sun) in IST for a Unix timestamp ── */
+  function istDayIndex(unixSec) {
+    const d = new Date(unixSec * 1000);
+    const ist = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    return (ist.getDay() + 6) % 7; // Mon=0 … Sun=6
+  }
+
+  /* ── AniList GraphQL query ── */
+  async function fetchSchedule(weekStart, weekEnd) {
+    const query = `
+      query ($start: Int, $end: Int) {
+        Page(perPage: 50) {
+          airingSchedules(airingAt_greater: $start, airingAt_lesser: $end, sort: TIME) {
+            airingAt
+            episode
+            media {
+              id
+              title { romaji english }
+              coverImage { large }
+              siteUrl
+              format
+            }
+          }
+        }
+        page2: Page(page: 2, perPage: 50) {
+          airingSchedules(airingAt_greater: $start, airingAt_lesser: $end, sort: TIME) {
+            airingAt
+            episode
+            media {
+              id
+              title { romaji english }
+              coverImage { large }
+              siteUrl
+              format
+            }
+          }
+        }
+      }
+    `;
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        variables: { start: Math.floor(weekStart / 1000), end: Math.floor(weekEnd / 1000) }
+      })
+    });
+    if (!res.ok) throw new Error('AniList API error');
+    const json = await res.json();
+    const p1 = json.data?.Page?.airingSchedules ?? [];
+    const p2 = json.data?.page2?.airingSchedules ?? [];
+    return [...p1, ...p2];
+  }
+
+  /* ── Fetch dubbed anime titles from our Supabase DB ── */
+  async function fetchDubbedTitles() {
+    if (window.DEMO_MODE || !window.supabaseClient) return new Set();
+    try {
+      const { data } = await supabaseClient
+        .from('anime')
+        .select('title, japanese_title')
+        .eq('status', 'active');
+      const titles = new Set();
+      (data || []).forEach(a => {
+        if (a.title) titles.add(a.title.toLowerCase());
+        if (a.japanese_title) titles.add(a.japanese_title.toLowerCase());
+      });
+      return titles;
+    } catch { return new Set(); }
+  }
+
+  /* ── Check if an AniList media has a known Indian dub ── */
+  function hasDub(media, dubbedTitles) {
+    if (!dubbedTitles.size) return false;
+    const romaji = (media.title.romaji || '').toLowerCase();
+    const english = (media.title.english || '').toLowerCase();
+    return dubbedTitles.has(romaji) || dubbedTitles.has(english);
+  }
+
+  /* ── Build and render the grid ── */
+  async function render() {
+    const grid = document.getElementById('weekGrid');
+    grid.innerHTML = '<div class="state-box"><div class="spinner"></div><p>Loading schedule…</p></div>';
+
+    const { monday, sunday } = getWeekBounds(weekOffset);
+
+    // Week range label
+    document.getElementById('weekRange').textContent =
+      `${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS[sunday.getMonth()]} ${sunday.getFullYear()}`;
+
+    let entries, dubbedTitles;
+    try {
+      [entries, dubbedTitles] = await Promise.all([
+        fetchSchedule(monday.getTime(), sunday.getTime()),
+        fetchDubbedTitles()
+      ]);
+    } catch (e) {
+      grid.innerHTML = `<div class="state-box"><p style="color:var(--red)">Failed to load schedule. Please try again.</p></div>`;
+      return;
+    }
+
+    // Remove duplicates (same media same day)
+    const seen = new Set();
+    const unique = entries.filter(e => {
+      const key = `${e.media.id}-${istDayIndex(e.airingAt)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Group by day (Mon=0 … Sun=6)
+    const byDay = Array.from({ length: 7 }, () => []);
+    unique.forEach(e => {
+      const d = istDayIndex(e.airingAt);
+      if (d >= 0 && d < 7) byDay[d].push(e);
+    });
+
+    // Today's day index (Mon=0)
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    const isCurrentWeek = weekOffset === 0;
+
+    // Build columns
+    grid.innerHTML = '';
+    const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    byDay.forEach((dayEntries, i) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      const isToday = isCurrentWeek && i === todayIdx;
+
+      const col = document.createElement('div');
+      col.className = 'day-col' + (isToday ? ' today' : '');
+      col.dataset.day = i;
+
+      const header = document.createElement('div');
+      header.className = 'day-header';
+      header.innerHTML = `
+        <div class="day-name">${dayNames[i]}</div>
+        <div class="day-date">${date.getDate()} ${MONTHS[date.getMonth()]}</div>
+        <div class="day-count">${dayEntries.length} episode${dayEntries.length !== 1 ? 's' : ''}</div>
+      `;
+      col.appendChild(header);
+
+      const entries_div = document.createElement('div');
+      entries_div.className = 'day-entries';
+
+      if (dayEntries.length === 0) {
+        entries_div.innerHTML = '<div class="day-empty">No episodes</div>';
+      } else {
+        dayEntries.forEach(e => {
+          const dubbed = hasDub(e.media, dubbedTitles);
+          const title = e.media.title.english || e.media.title.romaji;
+          const card = document.createElement('a');
+          card.className = 'anime-card';
+          card.href = e.media.siteUrl || '#';
+          card.target = '_blank';
+          card.rel = 'noopener';
+
+          const posterHTML = e.media.coverImage?.large
+            ? `<img class="card-poster" src="${e.media.coverImage.large}" alt="${title}" loading="lazy" />`
+            : `<div class="card-poster-placeholder">🎬</div>`;
+
+          card.innerHTML = `
+            ${posterHTML}
+            <div class="card-body">
+              <div class="card-time">${toIST(e.airingAt)}</div>
+              <div class="card-title">${title}</div>
+              <div class="card-ep">EP ${e.episode}</div>
+              ${dubbed ? '<div class="card-dub-badge">Indian dub available</div>' : ''}
+            </div>
+          `;
+          entries_div.appendChild(card);
+        });
+      }
+
+      col.appendChild(entries_div);
+      grid.appendChild(col);
+    });
+  }
+
+  /* ── Navigation ── */
+  document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; render(); });
+  document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; render(); });
+  document.getElementById('goToday').addEventListener('click', () => { weekOffset = 0; render(); });
+
+  render();
+</script>
+</body>
+</html>

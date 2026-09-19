@@ -220,8 +220,9 @@
 <nav>
   <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
   <div class="nav-links">
-    <a href="index.html">Browse</a>
-    <a href="submit.html" style="color:var(--text)">Submit Anime</a>
+    <a href="index.html">Dub Library</a>
+    <a href="schedule.html">Airing Now</a>
+    <a href="submit.html" style="color:var(--text)">Add a Dub</a>
   </div>
 </nav>
 
@@ -279,11 +280,6 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label>MyAnimeList URL</label>
-          <input type="url" name="mal_url" placeholder="https://myanimelist.net/anime/…" />
-          <p class="hint">Helps us confirm the anime details. Not required but speeds up review.</p>
-        </div>
       </div>
 
       <!-- Section 2: Dub Info -->
@@ -301,24 +297,7 @@
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="form-group">
-            <label>Streaming Platform <span class="req">*</span></label>
-            <select name="platform">
-              <option value="">— Select platform —</option>
-              <option>Crunchyroll</option>
-              <option>Netflix</option>
-              <option>Disney+ Hotstar</option>
-              <option>Amazon Prime Video</option>
-              <option>Sony LIV</option>
-              <option>Zee5</option>
-              <option>JioCinema</option>
-              <option>Muse India (YouTube)</option>
-              <option>YouTube (other)</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="form-group">
+        <div class="form-group">
             <label>Dub Status <span class="req">*</span></label>
             <select name="dub_status">
               <option value="">— Select status —</option>
@@ -328,18 +307,12 @@
               <option value="Removed">Removed — no longer available</option>
             </select>
           </div>
-        </div>
 
         <div class="form-group">
           <label>Episodes Dubbed (if partial)</label>
           <input type="text" name="episodes_dubbed" placeholder="e.g. Ep 1–24, or Season 1 only" />
         </div>
 
-        <div class="form-group">
-          <label>Platform / Stream Link</label>
-          <input type="url" name="stream_url" placeholder="https://www.crunchyroll.com/…" />
-          <p class="hint">Direct link to the dubbed anime on the platform, if you have it.</p>
-        </div>
       </div>
 
       <!-- Section 3: Additional Info -->
@@ -380,12 +353,10 @@
 
     const title = document.getElementById('anime_title').value.trim();
     const langs = [...document.querySelectorAll('[name=languages]:checked')].map(c => c.value);
-    const platform = document.querySelector('[name=platform]').value;
     const status = document.querySelector('[name=dub_status]').value;
 
     if (!title) { showError('Please enter the anime title.'); return; }
     if (!langs.length) { showError('Please select at least one dubbed language.'); return; }
-    if (!platform) { showError('Please select the streaming platform.'); return; }
     if (!status) { showError('Please select the dub status.'); return; }
 
     const btn = document.getElementById('submitBtn');
@@ -396,12 +367,9 @@
       anime_title:      title,
       season:           document.querySelector('[name=season]').value.trim() || null,
       year:             document.querySelector('[name=year]').value.trim() || null,
-      mal_url:          document.querySelector('[name=mal_url]').value.trim() || null,
       languages:        langs,
-      platform:         platform,
       dub_status:       status,
       episodes_dubbed:  document.querySelector('[name=episodes_dubbed]').value.trim() || null,
-      stream_url:       document.querySelector('[name=stream_url]').value.trim() || null,
       notes:            document.querySelector('[name=notes]').value.trim() || null,
       submitter_name:   document.querySelector('[name=submitter_name]').value.trim() || null,
       submitter_email:  document.querySelector('[name=submitter_email]').value.trim() || null,

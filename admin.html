@@ -117,6 +117,15 @@
       display: flex; align-items: center; justify-content: space-between;
     }
 
+    /* ── Submission filters ── */
+    .sub-filter {
+      padding: 6px 16px; border-radius: 99px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-muted); transition: all 0.15s;
+    }
+    .sub-filter:hover { border-color: var(--accent); color: var(--text); }
+    .sub-filter.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
     /* ── Cards ── */
     .card {
       background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
@@ -482,6 +491,12 @@
 
       <div class="panel" id="panel-submissions">
         <div class="panel-title">Community Submissions</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px" id="subFilters">
+          <button onclick="setSubFilter('all')"      class="sub-filter active" data-f="all">All</button>
+          <button onclick="setSubFilter('pending')"  class="sub-filter" data-f="pending">Yet to Review</button>
+          <button onclick="setSubFilter('approved')" class="sub-filter" data-f="approved">Approved</button>
+          <button onclick="setSubFilter('rejected')" class="sub-filter" data-f="rejected">Rejected</button>
+        </div>
         <div id="subsWrap"><p style="color:var(--text-muted)">Loading…</p></div>
       </div>
 
@@ -647,40 +662,60 @@
   }
   function hideAlert(el) { el.className = 'alert'; }
 
+  let subFilter = 'all';
+
+  function setSubFilter(f) {
+    subFilter = f;
+    document.querySelectorAll('.sub-filter').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+    renderSubmissions();
+  }
+
+  let _subsData = [];
+
   async function loadSubmissions() {
     const wrap = document.getElementById('subsWrap');
     wrap.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
     const { data, error } = await supabaseClient.from('submissions')
       .select('*').order('created_at', { ascending: false });
     if (error) { wrap.innerHTML = `<p style="color:var(--red)">${error.message}</p>`; return; }
-    if (!data.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No submissions yet.</p>'; return; }
+    _subsData = data;
+    renderSubmissions();
+  }
 
-    const pending = data.filter(s => s.review_status === 'pending');
-    const rest    = data.filter(s => s.review_status !== 'pending');
+  function renderSubmissions() {
+    const wrap = document.getElementById('subsWrap');
+    const data = subFilter === 'all' ? _subsData : _subsData.filter(s => s.review_status === subFilter);
+    if (!_subsData.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No submissions yet.</p>'; return; }
+    if (!data.length) { wrap.innerHTML = `<p style="color:var(--text-muted)">No ${subFilter} submissions.</p>`; return; }
+
+    const pending  = data.filter(s => s.review_status === 'pending');
+    const approved = data.filter(s => s.review_status === 'approved');
+    const rejected = data.filter(s => s.review_status === 'rejected');
     document.getElementById('subBadge').textContent = pending.length ? `(${pending.length})` : '';
+
+    const sectionLabel = (text, color, count) =>
+      `<div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:${color};margin:18px 0 10px">${text} (${count})</div>`;
 
     const renderCard = s => {
       const langs = Array.isArray(s.languages) ? s.languages.join(', ') : s.languages;
       const date  = new Date(s.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
-      const statusColor = s.review_status === 'approved' ? 'var(--green)' : s.review_status === 'rejected' ? 'var(--red)' : 'var(--accent)';
+      const statusColor = s.review_status === 'approved' ? 'var(--green)' : s.review_status === 'added' ? 'var(--accent)' : s.review_status === 'rejected' ? 'var(--red)' : 'var(--yellow)';
+      const statusLabel = s.review_status === 'added' ? 'Added to DB' : s.review_status;
       return `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;${s.review_status==='added'?'opacity:0.6':''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
           <div>
             <div style="font-weight:700;font-size:1rem">${s.anime_title}</div>
             <div style="color:var(--text-muted);font-size:0.82rem;margin-top:3px">${date}${s.submitter_name ? ' · ' + s.submitter_name : ''}${s.submitter_email ? ' · ' + s.submitter_email : ''}</div>
           </div>
-          <span style="font-size:0.75rem;font-weight:700;color:${statusColor};text-transform:uppercase;white-space:nowrap">${s.review_status}</span>
+          <span style="font-size:0.75rem;font-weight:700;color:${statusColor};text-transform:uppercase;white-space:nowrap">${statusLabel}</span>
         </div>
         <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:0.85rem;">
           ${s.season ? `<div><span style="color:var(--text-muted)">Season:</span> ${s.season}</div>` : ''}
           ${s.year   ? `<div><span style="color:var(--text-muted)">Year:</span> ${s.year}</div>` : ''}
           ${langs    ? `<div><span style="color:var(--text-muted)">Languages:</span> ${langs}</div>` : ''}
-          ${s.platform  ? `<div><span style="color:var(--text-muted)">Platform:</span> ${s.platform}</div>` : ''}
           ${s.dub_status? `<div><span style="color:var(--text-muted)">Status:</span> ${s.dub_status}</div>` : ''}
           ${s.episodes_dubbed ? `<div><span style="color:var(--text-muted)">Episodes:</span> ${s.episodes_dubbed}</div>` : ''}
-          ${s.mal_url   ? `<div><a href="${s.mal_url}" target="_blank" style="color:var(--accent)">MAL Link ↗</a></div>` : ''}
-          ${s.stream_url? `<div><a href="${s.stream_url}" target="_blank" style="color:var(--accent)">Stream Link ↗</a></div>` : ''}
         </div>
         ${s.notes ? `<div style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border);padding-top:10px">${s.notes}</div>` : ''}
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
@@ -689,19 +724,27 @@
           <button onclick="updateSubmission(${s.id},'rejected')" style="padding:7px 20px;background:var(--red);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Reject</button>
           ` : ''}
           ${s.review_status === 'approved' ? `
-          <button onclick="prefillFromSubmission(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">→ Add to Database</button>
+          <button onclick="prefillAndMarkAdded(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">→ Add to Database</button>
           ` : ''}
         </div>
       </div>`;
     };
 
-    wrap.innerHTML = (pending.length ? `<div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Pending (${pending.length})</div>` + pending.map(renderCard).join('') : '') +
-      (rest.length ? `<div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin:18px 0 10px">Reviewed</div>` + rest.map(renderCard).join('') : '');
+    let html = '';
+    if (pending.length)  html += sectionLabel('Pending', 'var(--yellow)', pending.length)  + pending.map(renderCard).join('');
+    if (approved.length) html += sectionLabel('Approved — ready to add', 'var(--green)', approved.length) + approved.map(renderCard).join('');
+    if (rejected.length) html += sectionLabel('Rejected', 'var(--red)', rejected.length)   + rejected.map(renderCard).join('');
+    if (!html) html = '<p style="color:var(--text-muted)">No submissions yet.</p>';
+    wrap.innerHTML = html;
   }
 
   async function updateSubmission(id, status) {
     await supabaseClient.from('submissions').update({ review_status: status }).eq('id', id);
     loadSubmissions();
+  }
+
+  function prefillAndMarkAdded(s) {
+    prefillFromSubmission(s);
   }
 
   function prefillFromSubmission(s) {

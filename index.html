@@ -421,8 +421,9 @@
 <nav>
   <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
   <div class="nav-links">
-    <a href="index.html">Browse</a>
-    <a href="submit.html">Submit Anime</a>
+    <a href="index.html">Dub Library</a>
+    <a href="schedule.html">Airing Now</a>
+    <a href="submit.html">Add a Dub</a>
     <a href="admin.html" class="admin-link">Admin</a>
   </div>
 </nav>
@@ -660,6 +661,53 @@
     return anime.poster_url || null;
   }
 
+  /* Fetch missing posters from AniList using MAL ID only (exact match) */
+  async function fillMissingPosters(animeList) {
+    const missing = animeList.filter(a => !posterUrl(a) && a.mal_id);
+    if (!missing.length) return;
+
+    const BATCH = 5;
+    for (let start = 0; start < missing.length; start += BATCH) {
+      const batch = missing.slice(start, start + BATCH);
+      const queries = batch.map((a, i) =>
+        `a${i}: Media(idMal: ${a.mal_id}, type: ANIME) { coverImage { large } title { romaji english } }`
+      );
+
+      try {
+        const res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: `{ ${queries.join('\n')} }` })
+        });
+        const json = await res.json();
+        if (!json.data) continue;
+        batch.forEach((a, i) => {
+          const media = json.data[`a${i}`];
+          if (!media?.coverImage?.large) return;
+
+          const normalize = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const ourTitle = normalize(a.title);
+          const romaji = normalize(media.title?.romaji);
+          const english = normalize(media.title?.english);
+          const match = ourTitle === romaji || ourTitle === english ||
+            ourTitle.includes(romaji) || romaji.includes(ourTitle) ||
+            ourTitle.includes(english) || english.includes(ourTitle);
+          if (!match) return;
+
+          const card = document.querySelector(`.anime-card[href="anime.html?id=${a.id}"]`);
+          if (!card) return;
+          const img = card.querySelector('img.poster-anilist');
+          const placeholder = card.querySelector('.poster-placeholder');
+          if (img) {
+            img.src = media.coverImage.large;
+            img.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+          }
+        });
+      } catch (e) { /* silently ignore */ }
+    }
+  }
+
   function langColor(lang) {
     const map = { Tamil: '#dc2626', Telugu: '#d97706', Hindi: '#16a34a', Malayalam: '#0284c7', Kannada: '#7c3aed' };
     return map[lang] || '#6b7280';
@@ -670,7 +718,7 @@
     const src = posterUrl(anime);
     const imgEl = src
       ? `<img src="${src}" alt="${anime.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : '';
+      : `<img class="poster-anilist" alt="${anime.title}" style="display:none;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`;
     const placeholder = `<div class="poster-placeholder" ${src ? 'style="display:none"' : ''}>${anime.title}</div>`;
     const badges = langs.slice(0, 4).map(l =>
       `<span class="dub-badge" style="background:${langColor(l)}aa">${l.slice(0,3)}</span>`
@@ -734,6 +782,7 @@
       </div>`;
     } else {
       grid.innerHTML = rows.map(a => renderCard(a, dubMap[a.id])).join('');
+      fillMissingPosters(rows);
     }
 
     renderPagination(count);
