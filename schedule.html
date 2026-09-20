@@ -397,21 +397,9 @@
   /* ── AniList GraphQL query ── */
   async function fetchSchedule(weekStart, weekEnd) {
     const query = `
-      query ($start: Int, $end: Int) {
-        Page(perPage: 50) {
-          airingSchedules(airingAt_greater: $start, airingAt_lesser: $end, sort: TIME) {
-            airingAt
-            episode
-            media {
-              id
-              title { romaji english }
-              coverImage { large }
-              siteUrl
-              format
-            }
-          }
-        }
-        page2: Page(page: 2, perPage: 50) {
+      query ($start: Int, $end: Int, $page: Int) {
+        Page(page: $page, perPage: 50) {
+          pageInfo { hasNextPage }
           airingSchedules(airingAt_greater: $start, airingAt_lesser: $end, sort: TIME) {
             airingAt
             episode
@@ -426,19 +414,25 @@
         }
       }
     `;
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        variables: { start: Math.floor(weekStart / 1000), end: Math.floor(weekEnd / 1000) }
-      })
-    });
-    if (!res.ok) throw new Error('AniList API error');
-    const json = await res.json();
-    const p1 = json.data?.Page?.airingSchedules ?? [];
-    const p2 = json.data?.page2?.airingSchedules ?? [];
-    return [...p1, ...p2];
+    const vars = { start: Math.floor(weekStart / 1000), end: Math.floor(weekEnd / 1000) };
+    const all = [];
+    let page = 1;
+    while (true) {
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { ...vars, page } })
+      });
+      if (!res.ok) break;
+      const json = await res.json();
+      const pageData = json.data?.Page;
+      if (!pageData) break;
+      all.push(...(pageData.airingSchedules ?? []));
+      if (!pageData.pageInfo?.hasNextPage) break;
+      page++;
+      if (page > 10) break; // safety cap
+    }
+    return all;
   }
 
   /* ── Fetch dubbed anime titles from our Supabase DB ── */
