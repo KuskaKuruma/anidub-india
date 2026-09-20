@@ -237,11 +237,21 @@
       padding: 8px;
     }
     .card-time {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(99,179,237,0.12);
+      border: 1px solid rgba(99,179,237,0.25);
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-bottom: 6px;
       font-size: 0.7rem;
       font-weight: 600;
       color: var(--accent);
-      margin-bottom: 4px;
       font-variant-numeric: tabular-nums;
+    }
+    .card-time svg {
+      flex-shrink: 0;
     }
     .card-title {
       font-size: 0.78rem;
@@ -546,7 +556,7 @@
           card.innerHTML = `
             ${posterHTML}
             <div class="card-body">
-              <div class="card-time">${toIST(e.airingAt)}</div>
+              <div class="card-time"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${toIST(e.airingAt)}</div>
               <div class="card-title">${title}</div>
               <div class="card-ep">EP ${e.episode}</div>
               ${dubbed ? '<div class="card-dub-badge">Indian dub available</div>' : ''}
