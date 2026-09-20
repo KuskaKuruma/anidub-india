@@ -820,16 +820,39 @@
     if (!data.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No updates yet.</p>'; return; }
     wrap.innerHTML = data.map(u => {
       const date = new Date(u.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
-      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:0.9rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.title}</div>
-          ${u.link ? `<a href="${u.link}" target="_blank" style="font-size:0.78rem;color:var(--accent);text-decoration:none;word-break:break-all">${u.link}</a>` : '<span style="font-size:0.78rem;color:var(--text-muted)">No link</span>'}
+      const eid = `ru-edit-${u.updates_id}`;
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
+        <!-- View row -->
+        <div id="${eid}-view" style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">${u.title}</div>
+            ${u.link ? `<a href="${u.link}" target="_blank" style="font-size:0.78rem;color:var(--accent);text-decoration:none;word-break:break-all">${u.link}</a>` : '<span style="font-size:0.78rem;color:var(--text-muted)">No link</span>'}
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0">${date}</div>
+          <button onclick="showRuEditForm(${u.updates_id})"
+            style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:0.8rem;cursor:pointer">Edit</button>
+          <button onclick="deleteRecentUpdate(${u.updates_id})"
+            style="padding:5px 12px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:transparent;color:var(--red);font-size:0.8rem;cursor:pointer">Delete</button>
         </div>
-        <div style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0">${date}</div>
-        <button onclick="editRecentUpdate(${u.updates_id}, ${JSON.stringify(u.title).replace(/"/g,'&quot;')}, ${JSON.stringify(u.link||'').replace(/"/g,'&quot;')})"
-          style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:0.8rem;cursor:pointer">Edit</button>
-        <button onclick="deleteRecentUpdate(${u.updates_id})"
-          style="padding:5px 12px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:transparent;color:var(--red);font-size:0.8rem;cursor:pointer">Delete</button>
+        <!-- Edit form (hidden by default) -->
+        <div id="${eid}-form" style="display:none;padding:14px 16px;border-top:1px solid var(--border);background:var(--bg);display:none;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px">Title *</label>
+            <input id="${eid}-title" type="text" value="${u.title.replace(/"/g,'&quot;')}"
+              style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem" />
+          </div>
+          <div>
+            <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:4px">Link (optional)</label>
+            <input id="${eid}-link" type="url" value="${(u.link||'').replace(/"/g,'&quot;')}"
+              style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem" />
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="saveRuEdit(${u.updates_id})"
+              style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer">Save</button>
+            <button onclick="hideRuEditForm(${u.updates_id})"
+              style="padding:7px 18px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;font-size:0.85rem;cursor:pointer">Cancel</button>
+          </div>
+        </div>
       </div>`;
     }).join('');
   }
@@ -861,18 +884,29 @@
     loadRecentUpdates();
   }
 
-  function editRecentUpdate(id, title, link) {
-    const newTitle = prompt('Title:', title);
-    if (newTitle === null) return;
-    const newLink = prompt('Link (leave blank for none):', link);
-    if (newLink === null) return;
-    supabaseClient.from('recent_updates')
-      .update({ title: newTitle.trim(), link: newLink.trim() || null })
-      .eq('updates_id', id)
-      .then(({ error }) => {
-        if (error) showRuAlert(error.message, false);
-        else { showRuAlert('Updated!', true); loadRecentUpdates(); }
-      });
+  function showRuEditForm(id) {
+    const eid = `ru-edit-${id}`;
+    document.getElementById(`${eid}-view`).style.display = 'none';
+    document.getElementById(`${eid}-form`).style.display = 'flex';
+  }
+
+  function hideRuEditForm(id) {
+    const eid = `ru-edit-${id}`;
+    document.getElementById(`${eid}-view`).style.display = 'flex';
+    document.getElementById(`${eid}-form`).style.display = 'none';
+  }
+
+  async function saveRuEdit(id) {
+    const eid = `ru-edit-${id}`;
+    const title = document.getElementById(`${eid}-title`).value.trim();
+    const link  = document.getElementById(`${eid}-link`).value.trim() || null;
+    if (!title) { document.getElementById(`${eid}-title`).focus(); return; }
+    const { error } = await supabaseClient.from('recent_updates')
+      .update({ title, link })
+      .eq('updates_id', id);
+    if (error) { showRuAlert(error.message, false); return; }
+    showRuAlert('Updated!', true);
+    loadRecentUpdates();
   }
 
   function setTodayDate() {
