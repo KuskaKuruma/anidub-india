@@ -325,10 +325,74 @@
       border-radius: 50%;
     }
 
-    @media (max-width: 600px) {
+    /* ── Mobile day slider ── */
+    @media (max-width: 768px) {
       .page-header { padding: 20px 16px 0; }
       .week-nav { padding: 14px 16px 0; }
-      .schedule-wrapper { padding: 16px 16px 40px; }
+      .schedule-wrapper { padding: 12px 0 40px; overflow-x: hidden; }
+
+      .week-grid {
+        display: flex;
+        min-width: unset;
+        gap: 0 !important;
+        transition: transform 0.3s ease;
+      }
+
+      .day-col {
+        min-width: calc((100vw - 32px - 16px) / 3);
+        max-width: calc((100vw - 32px - 16px) / 3);
+        flex-shrink: 0;
+        margin-right: 8px;
+      }
+      .day-col:last-child { margin-right: 0; }
+
+      .day-slider-wrap {
+        overflow: hidden;
+        padding: 0 16px;
+      }
+
+      .day-slider-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px 4px;
+      }
+
+      .day-slider-btn {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      .day-slider-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      .day-slider-label {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+      }
+    }
+
+    @media (min-width: 769px) {
+      .day-slider-nav { display: none; }
+      .day-slider-wrap { overflow: visible; padding: 0; }
+      .week-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(160px, 1fr));
+        gap: 8px !important;
+        min-width: 1120px;
+        transform: none !important;
+      }
+      .day-col {
+        min-width: unset;
+        max-width: unset;
+        margin-right: 0;
+      }
     }
   </style>
 </head>
@@ -357,10 +421,17 @@
 
 
 <div class="schedule-wrapper">
-  <div class="week-grid" id="weekGrid">
-    <div class="state-box">
-      <div class="spinner"></div>
-      <p>Loading schedule…</p>
+  <div class="day-slider-nav" id="daySliderNav">
+    <button class="day-slider-btn" id="dayPrev">&#8592;</button>
+    <span class="day-slider-label" id="daySliderLabel"></span>
+    <button class="day-slider-btn" id="dayNext">&#8594;</button>
+  </div>
+  <div class="day-slider-wrap">
+    <div class="week-grid" id="weekGrid">
+      <div class="state-box">
+        <div class="spinner"></div>
+        <p>Loading schedule…</p>
+      </div>
     </div>
   </div>
 </div>
@@ -569,12 +640,57 @@
       col.appendChild(entries_div);
       grid.appendChild(col);
     });
+
+    // Init mobile slider after grid is built
+    initSlider();
   }
 
   /* ── Navigation ── */
   document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; render(); });
   document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; render(); });
   document.getElementById('goToday').addEventListener('click', () => { weekOffset = 0; render(); });
+
+  /* ── Mobile day slider ── */
+  let daySliderStart = 0; // first visible day index (0–4 so last window is days 4-5-6)
+
+  function isMobile() { return window.innerWidth <= 768; }
+
+  function updateSlider() {
+    if (!isMobile()) return;
+    const grid = document.getElementById('weekGrid');
+    const col = grid.querySelector('.day-col');
+    const colWidth = col ? col.offsetWidth + 8 : 0; // width + margin-right
+    grid.style.transform = `translateX(${-(daySliderStart * colWidth)}px)`;
+
+    const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const end = Math.min(daySliderStart + 2, 6);
+    document.getElementById('daySliderLabel').textContent =
+      `${dayNames[daySliderStart]} – ${dayNames[end]}`;
+
+    document.getElementById('dayPrev').disabled = daySliderStart === 0;
+    document.getElementById('dayNext').disabled = daySliderStart >= 4;
+  }
+
+  function initSlider() {
+    if (!isMobile()) return;
+    // Default to show today (centred if possible)
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    if (weekOffset === 0) {
+      daySliderStart = Math.min(Math.max(todayIdx - 1, 0), 4);
+    } else {
+      daySliderStart = 0;
+    }
+    updateSlider();
+  }
+
+  document.getElementById('dayPrev').addEventListener('click', () => {
+    if (daySliderStart > 0) { daySliderStart--; updateSlider(); }
+  });
+  document.getElementById('dayNext').addEventListener('click', () => {
+    if (daySliderStart < 4) { daySliderStart++; updateSlider(); }
+  });
+
+  window.addEventListener('resize', updateSlider);
 
   render();
 </script>
