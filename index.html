@@ -812,34 +812,31 @@
   }
 
   async function loadUpdates() {
-    let data, error;
-    if (window.DEMO_MODE) {
-      const sorted = [...window.SEED_DUBS].sort((a, b) => b.added_date.localeCompare(a.added_date)).slice(0, 10);
-      const animeMap = Object.fromEntries(window.SEED_ANIME.map(a => [a.id, a]));
-      data = sorted.map(d => ({ ...d, anime: animeMap[d.anime_id] }));
-    } else {
-      ({ data, error } = await supabaseClient
-        .from('dubs')
-        .select('anime_id, language, platform, dub_status, added_date, anime(title)')
-        .order('added_date', { ascending: false })
-        .limit(10));
-    }
-
     const el = document.getElementById('updatesList');
+    if (window.DEMO_MODE || !window.supabaseClient) {
+      el.innerHTML = '<p style="color:var(--text-muted);font-size:.9rem;padding:12px 0">No updates yet.</p>';
+      return;
+    }
+    const { data, error } = await supabaseClient
+      .from('recent_updates')
+      .select('updates_id, title, link, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
     if (error || !data || data.length === 0) {
       el.innerHTML = '<p style="color:var(--text-muted);font-size:.9rem;padding:12px 0">No updates yet.</p>';
       return;
     }
 
-    el.innerHTML = data.map(d => {
-      const dotClass = (d.dub_status || '').toLowerCase().replace(' ', '-') || 'complete';
-      const title = d.anime?.title || 'Unknown Anime';
-      return `<a class="update-row" href="anime.html?id=${d.anime_id}">
-        <div class="update-dot ${dotClass}"></div>
-        <div class="update-title">${title}</div>
-        <div class="update-detail">${d.language} · ${d.platform} · ${d.dub_status}</div>
-        <div class="update-date">${d.added_date || ''}</div>
-      </a>`;
+    el.innerHTML = data.map(u => {
+      const date = new Date(u.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+      const tag = u.link ? 'a' : 'div';
+      const href = u.link ? `href="${u.link}" target="_blank" rel="noopener"` : '';
+      return `<${tag} class="update-row" ${href}>
+        <div class="update-dot complete"></div>
+        <div class="update-title">${u.title}</div>
+        <div class="update-date">${date}</div>
+      </${tag}>`;
     }).join('');
   }
 
