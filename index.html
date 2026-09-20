@@ -891,15 +891,33 @@
   loadUpdates();
 </script>
 
-<section style="max-width:700px;margin:0 auto;padding:48px 24px 60px">
-  <h2 style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:6px">Share your feedback</h2>
-  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">Help us improve AniDub India — takes less than a minute.</p>
-  <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)">
-    <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSfQK4kizZDcGZ11ajUAl71oC-ETQO-Ly7kdnjNB2hDP6Z0EzQ/viewform?embedded=true"
-      width="100%" height="600" frameborder="0" marginheight="0" marginwidth="0"
-      style="display:block">Loading…</iframe>
+<section style="max-width:560px;margin:0 auto;padding:48px 24px 60px">
+  <h2 style="font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:4px">Share your feedback</h2>
+  <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">Have a suggestion or spotted something? Let us know.</p>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px">
+    <div>
+      <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">Your name or Insta ID <span style="font-size:0.72rem">(optional)</span></label>
+      <input id="fb-name" type="text" placeholder="e.g. @animefan_india"
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem;outline:none;box-sizing:border-box" />
+    </div>
+    <div>
+      <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">Your feedback <span style="color:var(--red)">*</span></label>
+      <textarea id="fb-text" rows="4" placeholder="What can we improve? Any missing dubs, bugs, or ideas…"
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem;resize:vertical;outline:none;box-sizing:border-box;font-family:inherit"></textarea>
+    </div>
+    <button onclick="submitFeedback()" style="align-self:flex-start;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:0.875rem;font-weight:600;cursor:pointer">Submit feedback ↗</button>
   </div>
 </section>
+<script>
+function submitFeedback() {
+  const name = document.getElementById('fb-name').value.trim();
+  const text = document.getElementById('fb-text').value.trim();
+  if (!text) { document.getElementById('fb-text').focus(); return; }
+  const base = 'https://docs.google.com/forms/d/e/1FAIpQLSfQK4kizZDcGZ11ajUAl71oC-ETQO-Ly7kdnjNB2hDP6Z0EzQ/viewform';
+  const url = `${base}?entry.324713195=${encodeURIComponent(name)}&entry.457199079=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+</script>
 
 </body>
 </html>
