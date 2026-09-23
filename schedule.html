@@ -442,6 +442,11 @@
         style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem;outline:none;box-sizing:border-box" />
     </div>
     <div>
+      <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">Email ID <span style="font-size:0.72rem">(optional)</span></label>
+      <input id="fb-email" type="email" placeholder="e.g. you@gmail.com"
+        style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem;outline:none;box-sizing:border-box" />
+    </div>
+    <div>
       <label style="display:block;font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">Your feedback <span style="color:var(--red)">*</span></label>
       <textarea id="fb-text" rows="4" placeholder="What can we improve? Any missing dubs, bugs, or ideas…"
         style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.875rem;resize:vertical;outline:none;box-sizing:border-box;font-family:inherit"></textarea>
@@ -451,11 +456,12 @@
 </section>
 <script>
 function submitFeedback() {
-  const name = document.getElementById('fb-name').value.trim();
-  const text = document.getElementById('fb-text').value.trim();
+  const name  = document.getElementById('fb-name').value.trim();
+  const email = document.getElementById('fb-email').value.trim();
+  const text  = document.getElementById('fb-text').value.trim();
   if (!text) { document.getElementById('fb-text').focus(); return; }
   const base = 'https://docs.google.com/forms/d/e/1FAIpQLSfQK4kizZDcGZ11ajUAl71oC-ETQO-Ly7kdnjNB2hDP6Z0EzQ/viewform';
-  const url = `${base}?entry.324713195=${encodeURIComponent(name)}&entry.457199079=${encodeURIComponent(text)}`;
+  const url = `${base}?entry.324713195=${encodeURIComponent(name)}&entry.607199000=${encodeURIComponent(email)}&entry.457199079=${encodeURIComponent(text)}`;
   window.open(url, '_blank');
 }
 </script>
