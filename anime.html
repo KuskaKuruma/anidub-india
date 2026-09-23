@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AniDub India</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="data/seed.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -370,32 +369,18 @@
       return;
     }
 
-    let animeData, seasonsData, dubsData;
-
-    if (window.DEMO_MODE) {
-      const id = parseInt(animeId);
-      animeData = window.SEED_ANIME.find(a => a.id === id) || null;
-      seasonsData = [];
-      dubsData = window.SEED_DUBS.filter(d => d.anime_id === id).sort((a, b) => a.language.localeCompare(b.language));
-    } else {
-      const [animeRes, seasonsRes, dubsRes] = await Promise.all([
-        supabaseClient.from('anime').select('*').eq('id', animeId).single(),
-        supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number'),
-        supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language'),
-      ]);
-      if (animeRes.error || !animeRes.data) {
-        app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
-        return;
-      }
-      animeData = animeRes.data;
-      seasonsData = seasonsRes.data || [];
-      dubsData = dubsRes.data || [];
-    }
-
-    if (!animeData) {
+    const [animeRes, seasonsRes, dubsRes] = await Promise.all([
+      supabaseClient.from('anime').select('*').eq('id', animeId).single(),
+      supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number'),
+      supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language'),
+    ]);
+    if (animeRes.error || !animeRes.data) {
       app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
       return;
     }
+    const animeData   = animeRes.data;
+    const seasonsData = seasonsRes.data || [];
+    const dubsData    = dubsRes.data || [];
 
     app.innerHTML = renderPage(animeData, seasonsData, dubsData);
   }

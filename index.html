@@ -538,7 +538,6 @@
   <p style="margin-top:8px"><a href="submit.html">Submit an anime or dub</a></p>
 </footer>
 
-<script src="data/seed.js"></script>
 <script src="supabase-config.js"></script>
 <script>
   const PAGE_SIZE = 24; // divisible by 6,4,3,2 — no orphan last row
@@ -566,48 +565,8 @@
     return data;
   }
 
-  // ── Demo mode: filter seed data locally ──
-  function filterSeedData({ lang, genre, type, status, sort, search, page }) {
-    let rows = [...window.SEED_ANIME];
-
-    if (lang !== 'All') {
-      const dubAnimeIds = new Set(
-        window.SEED_DUBS.filter(d => d.language === lang).map(d => d.anime_id)
-      );
-      rows = rows.filter(a => dubAnimeIds.has(a.id));
-    }
-    if (genre)  rows = rows.filter(a => a.genre && a.genre.includes(genre));
-    if (type)   rows = rows.filter(a => a.type === type);
-    if (status) rows = rows.filter(a => a.status === status);
-    if (search) rows = rows.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
-
-    const sortFns = {
-      recently_added: (a, b) => b.id - a.id,
-      title_asc:      (a, b) => a.title.localeCompare(b.title),
-      title_desc:     (a, b) => b.title.localeCompare(a.title),
-      year_desc:      (a, b) => b.year - a.year,
-      year_asc:       (a, b) => a.year - b.year,
-    };
-    rows.sort(sortFns[sort] || sortFns.recently_added);
-
-    const count = rows.length;
-    const from = (page - 1) * PAGE_SIZE;
-    return { rows: rows.slice(from, from + PAGE_SIZE), count };
-  }
-
-  function seedDubsForAnime(animeIds) {
-    const map = {};
-    window.SEED_DUBS.filter(d => animeIds.includes(d.anime_id)).forEach(d => {
-      if (!map[d.anime_id]) map[d.anime_id] = new Set();
-      map[d.anime_id].add(d.language);
-    });
-    return map;
-  }
-
   // ── Live Supabase fetch ──
   async function fetchAnime({ lang, genre, type, status, sort, search, page }) {
-    if (window.DEMO_MODE) return filterSeedData({ lang, genre, type, status, sort, search, page });
-
     let dubIds = null;
     if (lang !== 'All') {
       const { data: dubs } = await supabaseClient.from('dubs').select('anime_id').eq('language', lang);
@@ -642,7 +601,6 @@
 
   async function fetchDubsForAnime(animeIds) {
     if (!animeIds.length) return {};
-    if (window.DEMO_MODE) return seedDubsForAnime(animeIds);
 
     const { data } = await supabaseClient.from('dubs').select('anime_id, language').in('anime_id', animeIds);
     const map = {};
@@ -654,7 +612,7 @@
   }
 
   function posterUrl(anime) {
-    if (!window.DEMO_MODE && anime.poster_path) {
+    if (anime.poster_path) {
       const { data } = supabaseClient.storage.from('posters').getPublicUrl(anime.poster_path);
       return data.publicUrl;
     }
@@ -813,7 +771,7 @@
 
   async function loadUpdates() {
     const el = document.getElementById('updatesList');
-    if (window.DEMO_MODE || !window.supabaseClient) {
+    if (!window.supabaseClient) {
       el.innerHTML = '<p style="color:var(--text-muted);font-size:.9rem;padding:12px 0">No updates yet.</p>';
       return;
     }

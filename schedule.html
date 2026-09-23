@@ -548,7 +548,7 @@ function submitFeedback() {
 
   /* ── Fetch dubbed anime titles from our Supabase DB ── */
   async function fetchDubbedTitles() {
-    if (window.DEMO_MODE || !window.supabaseClient) return new Set();
+    if (!window.supabaseClient) return new Set();
     try {
       const { data } = await supabaseClient
         .from('anime')

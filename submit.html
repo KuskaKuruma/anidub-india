@@ -376,12 +376,6 @@
       review_status:    'pending',
     };
 
-    if (window.DEMO_MODE) {
-      // Demo mode — just show success without saving
-      showSuccess();
-      return;
-    }
-
     const { error } = await window.supabaseClient.from('submissions').insert(payload);
 
     if (error) {

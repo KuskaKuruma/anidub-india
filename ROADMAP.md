@@ -113,8 +113,8 @@ Every page carries its own full `<style>` block and a hand-copied `<nav>`. A nav
 
 **Options:** extract a `styles.css` plus a small `nav.js` that injects the markup — keeps the no-build-step constraint. Or accept the duplication and lean on grep. Worth deciding explicitly rather than drifting.
 
-### 2. Dead `DEMO_MODE` branches
-`window.DEMO_MODE` is `true` only when `SUPABASE_URL === 'YOUR_SUPABASE_URL'` — it has been permanently `false` since the real URL was set. Every `if (window.DEMO_MODE)` branch across `index.html`, `anime.html`, and `submit.html` is unreachable, along with the `data/seed.js` dependency. Removing it would meaningfully shrink the files.
+### 2. ~~Dead `DEMO_MODE` branches~~ ✅ resolved Sep 2026
+`window.DEMO_MODE` was only ever `true` when `SUPABASE_URL === 'YOUR_SUPABASE_URL'`, so it had been permanently `false` since the real URL was set. Removed: all eight branches across `index.html`, `anime.html`, `submit.html`, `schedule.html`, and `supabase-config.js`; the now-unused `filterSeedData()` and `seedDubsForAnime()`; both `data/seed.js` script tags; and the 40 KB `data/seed.js` file itself. Net −124 lines. Recoverable from git history if a no-backend mode is ever wanted.
 
 ### 3. GitHub token in the git remote (security)
 `.git/config` has a personal access token embedded in the `origin` URL in plaintext. Rotate it and switch to SSH:

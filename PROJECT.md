@@ -32,10 +32,9 @@ Import this file into any AI tool or editor to get full context on the codebase 
 | `submit.html` | ~412 | **Add a Dub** — public submission form → `submissions` table. |
 | `admin.html` | ~1340 | Admin dashboard. Auth-gated CRUD for anime / seasons / dubs / submissions / recent updates. |
 | `feedback.html` | ~136 | Standalone feedback page (Google Form iframe). Not linked in main nav. |
-| `supabase-config.js` | 11 | Supabase URL + anon key, creates `window.supabaseClient`. Sets `window.DEMO_MODE`. |
+| `supabase-config.js` | 6 | Supabase URL + anon key, creates `window.supabaseClient`. |
 | `fix-mal-ids.js` | 145 | **One-off Node script.** Fixes wrong MAL IDs + backfills posters from AniList. Not part of the site. |
 | `_headers` | — | Cache-Control rules (Netlify-style; ignored by GitHub Pages). |
-| `data/seed.js` | — | Seed data used only when `DEMO_MODE` is true. |
 
 Directories `old/`, `Plan/`, `Dub Data/` are gitignored scratch/archive.
 
@@ -427,7 +426,7 @@ GitHub Pages picks it up in about a minute. There is no staging environment.
 | **AniList rate limits** | Batch requests (5 aliased queries per call in the browser); ~1200ms between calls in Node scripts. |
 | **Supabase SDK on Node 18** | `@supabase/realtime-js` needs native WebSocket (Node 22+). `fix-mal-ids.js` therefore uses the REST API via plain `fetch()`. |
 | **Google Form entry IDs** | Not sequential, not guessable. Always extract from `FB_PUBLIC_LOAD_DATA_`. |
-| **`DEMO_MODE`** | Flips true only when `SUPABASE_URL === 'YOUR_SUPABASE_URL'`. Currently always false. Seed-data branches in the code are dormant. |
+| **No offline/demo fallback** | Every page assumes Supabase is reachable. There was a `DEMO_MODE` seed-data path; it was permanently unreachable and was removed (Sep 2026). If a no-backend mode is ever wanted again, it needs rebuilding — don't expect a fallback to exist. |
 
 ---
 
