@@ -235,6 +235,10 @@
     'Sony LIV': 'https://www.sonyliv.com',
     'Zee5': 'https://www.zee5.com',
     'JioCinema': 'https://www.jiocinema.com',
+    'JioHotstar': 'https://www.hotstar.com',
+    'Anime Times': 'https://www.primevideo.com',
+    'MX Player': 'https://www.mxplayer.in',
+    'Airtel Xstream Play': 'https://www.airtelxstream.in',
   };
 
   function posterUrl(anime) {
@@ -265,7 +269,7 @@
           <td>${platformUrls[d.platform]
             ? `<a class="platform-link" href="${platformUrls[d.platform]}" target="_blank" rel="noopener">${d.platform} ↗</a>`
             : d.platform}</td>
-          <td><span class="status-badge ${statusClass(d.dub_status)}">${d.dub_status || '—'}</span></td>
+          <td><span class="status-badge ${statusClass(d.status || d.dub_status)}">${d.status || d.dub_status || '—'}</span></td>
           <td>${d.episodes_dubbed || '—'}</td>
           <td style="color:var(--text-muted)">${d.notes || '—'}</td>
         </tr>`).join('')}
@@ -299,11 +303,15 @@
     if (seasons.length > 0) {
       seasonHtml = seasons.map(s => {
         const sectionDubs = seasonDubMap[s.id] || [];
+        if (!sectionDubs.length) return '';
+        const storedName = (s.season_name || s.season_title || '').trim();
+        const generic = !storedName || new RegExp(`^season\\s+${s.season_number}$`, 'i').test(storedName);
+        const heading = generic ? `Season ${s.season_number}` : storedName;
         const epRange = (s.episodes_start && s.episodes_end)
           ? `Ep ${s.episodes_start}–${s.episodes_end}` : '';
         return `<div class="season-block">
           <div class="season-title">
-            Season ${s.season_number}${s.season_title ? ` — ${s.season_title}` : ''}
+            ${heading}
             ${epRange ? `<span class="season-ep">${epRange}</span>` : ''}
           </div>
           ${renderDubTable(sectionDubs)}
@@ -371,8 +379,8 @@
 
     const [animeRes, seasonsRes, dubsRes] = await Promise.all([
       supabaseClient.from('anime').select('*').eq('id', animeId).single(),
-      supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number'),
-      supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language'),
+      supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number').order('id'),
+      supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language').order('platform'),
     ]);
     if (animeRes.error || !animeRes.data) {
       app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
