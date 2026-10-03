@@ -666,13 +666,19 @@
     }
   }
 
+  const LANG_ORDER = ['Tamil', 'Telugu', 'Hindi', 'Malayalam', 'Kannada', 'English', 'Bengali'];
+  function langRank(lang) {
+    const i = LANG_ORDER.indexOf(lang);
+    return i === -1 ? LANG_ORDER.length : i;
+  }
+
   function langColor(lang) {
     const map = { Tamil: '#dc2626', Telugu: '#d97706', Hindi: '#16a34a', Malayalam: '#0284c7', Kannada: '#7c3aed' };
     return map[lang] || '#6b7280';
   }
 
   function renderCard(anime, dubSet) {
-    const langs = dubSet ? [...dubSet] : [];
+    const langs = (dubSet ? [...dubSet] : []).sort((a, b) => langRank(a) - langRank(b) || a.localeCompare(b));
     const src = posterUrl(anime);
     const imgEl = src
       ? `<img src="${src}" alt="${anime.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`

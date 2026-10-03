@@ -236,9 +236,7 @@
     'Zee5': 'https://www.zee5.com',
     'JioCinema': 'https://www.jiocinema.com',
     'JioHotstar': 'https://www.hotstar.com',
-    'Anime Times': 'https://www.primevideo.com',
-    'MX Player': 'https://www.mxplayer.in',
-    'Airtel Xstream Play': 'https://www.airtelxstream.in',
+    'Muse Asia': 'https://www.youtube.com/@MuseAsia',
   };
 
   function posterUrl(anime) {
@@ -247,6 +245,12 @@
       return data.publicUrl;
     }
     return anime.poster_url || null;
+  }
+
+  const LANG_ORDER = ['Tamil', 'Telugu', 'Hindi', 'Malayalam', 'Kannada', 'English', 'Bengali'];
+  function langRank(lang) {
+    const i = LANG_ORDER.indexOf(lang);
+    return i === -1 ? LANG_ORDER.length : i;
   }
 
   function statusClass(s) {
@@ -380,7 +384,7 @@
     const [animeRes, seasonsRes, dubsRes] = await Promise.all([
       supabaseClient.from('anime').select('*').eq('id', animeId).single(),
       supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number').order('id'),
-      supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('language').order('platform'),
+      supabaseClient.from('dubs').select('*').eq('anime_id', animeId).order('platform'),
     ]);
     if (animeRes.error || !animeRes.data) {
       app.innerHTML = `<div class="error-msg"><h2>Anime not found</h2><p><a href="index.html">← Back to browse</a></p></div>`;
@@ -388,7 +392,9 @@
     }
     const animeData   = animeRes.data;
     const seasonsData = seasonsRes.data || [];
-    const dubsData    = dubsRes.data || [];
+    const dubsData = (dubsRes.data || []).sort((a, b) =>
+      langRank(a.language) - langRank(b.language) || (a.platform || '').localeCompare(b.platform || '')
+    );
 
     app.innerHTML = renderPage(animeData, seasonsData, dubsData);
   }
