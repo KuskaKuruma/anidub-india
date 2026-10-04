@@ -144,6 +144,7 @@
       cursor: pointer; transition: all 0.2s; user-select: none;
     }
     .dub-lang-check:checked + .genre-chip,
+    .d-lang-check:checked + .genre-chip,
     .e-dub-lang-check:checked + .genre-chip,
     .genre-check:checked + .genre-chip {
       background: var(--accent); border-color: var(--accent); color: #fff;
@@ -172,6 +173,7 @@
     }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .data-table select, .data-table input[type=text] { padding: 6px 8px; font-size: 0.82rem; }
 
     /* ── Alerts ── */
     .alert {
@@ -258,6 +260,7 @@
         <div class="sidebar-label">Seasons & Dubs</div>
         <button class="sidebar-btn" onclick="showPanel('addSeason')">+ Add Season</button>
         <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Dub</button>
+        <button class="sidebar-btn" onclick="showPanel('editDubs')">Edit Dubs</button>
         <button class="sidebar-btn" onclick="showPanel('listDubs')">Browse Dubs</button>
       </div>
       <div class="sidebar-section">
@@ -396,27 +399,23 @@
         <div class="card">
           <div class="form-group">
             <label>Select Anime *</label>
-            <select id="s_anime_id"><option value="">— select —</option></select>
+            <input type="text" id="s_search" placeholder="Search by title…" oninput="filterAnimeSelect('s_search','s_anime_id')" style="margin-bottom:8px" />
+            <select id="s_anime_id" onchange="loadSeasonsForSeasonForm(this.value)"><option value="">— select —</option></select>
           </div>
+          <div id="s_existing"></div>
           <div class="grid-2">
             <div class="form-group">
               <label>Season Number *</label>
-              <input type="number" id="s_number" placeholder="1" min="1" />
+              <input type="number" id="s_number" placeholder="2" min="1" />
             </div>
             <div class="form-group">
-              <label>Season Title</label>
-              <input type="text" id="s_title" placeholder="Saiyan Saga (optional)" />
+              <label>Season Name</label>
+              <input type="text" id="s_title" placeholder="Season 2" />
             </div>
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label>Episode Start</label>
-              <input type="number" id="s_ep_start" placeholder="1" min="1" />
-            </div>
-            <div class="form-group">
-              <label>Episode End</label>
-              <input type="number" id="s_ep_end" placeholder="26" min="1" />
-            </div>
+          <div class="form-group">
+            <label>Year</label>
+            <input type="number" id="s_year" placeholder="2026" min="1960" />
           </div>
           <button class="btn btn-primary" onclick="saveSeason()">Save Season</button>
         </div>
@@ -429,21 +428,42 @@
         <div class="card">
           <div class="form-group">
             <label>Select Anime *</label>
+            <input type="text" id="d_search" placeholder="Search by title…" oninput="filterAnimeSelect('d_search','d_anime_id')" style="margin-bottom:8px" />
             <select id="d_anime_id" onchange="loadSeasonsForDub(this.value)"><option value="">— select —</option></select>
           </div>
           <div class="form-group">
-            <label>Season (leave blank = whole anime)</label>
-            <select id="d_season_id"><option value="">Whole anime / all seasons</option></select>
+            <label>Season *</label>
+            <select id="d_season_id" onchange="toggleNewSeasonFields()">
+              <option value="">— select —</option>
+            </select>
+            <small style="color:var(--text-muted);margin-top:6px;display:block">When the next season’s dub is released, choose “Add next season”.</small>
+          </div>
+          <div id="d_new_season" style="display:none">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Season Number *</label>
+                <input type="number" id="d_season_number" min="1" />
+              </div>
+              <div class="form-group">
+                <label>Season Name</label>
+                <input type="text" id="d_season_name" placeholder="Season 2" />
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Languages *</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px" id="d_lang_grid">
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Tamil" style="display:none"/><span class="genre-chip">Tamil</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Telugu" style="display:none"/><span class="genre-chip">Telugu</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Hindi" style="display:none"/><span class="genre-chip">Hindi</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Malayalam" style="display:none"/><span class="genre-chip">Malayalam</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Kannada" style="display:none"/><span class="genre-chip">Kannada</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="English" style="display:none"/><span class="genre-chip">English</span></label>
+              <label style="cursor:pointer"><input type="checkbox" class="d-lang-check" value="Bengali" style="display:none"/><span class="genre-chip">Bengali</span></label>
+            </div>
+            <small style="color:var(--text-muted);margin-top:6px;display:block">Languages already on this anime are checked. Uncheck any that are not in the new season.</small>
           </div>
           <div class="grid-2">
-            <div class="form-group">
-              <label>Language *</label>
-              <select id="d_language">
-                <option>Tamil</option><option>Telugu</option><option>Hindi</option>
-                <option>Malayalam</option><option>Kannada</option>
-                <option>English</option><option>Bengali</option>
-              </select>
-            </div>
             <div class="form-group">
               <label>Platform *</label>
               <select id="d_platform">
@@ -454,30 +474,39 @@
                 <option>Sony LIV</option>
               </select>
             </div>
-          </div>
-          <div class="grid-2">
             <div class="form-group">
               <label>Dub Status *</label>
               <select id="d_status">
-                <option>Complete</option><option>Partial</option><option>Removed</option>
+                <option>Complete</option>
+                <option>Ongoing</option>
+                <option>Partial</option>
+                <option>Removed</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Added Date *</label>
-              <input type="date" id="d_date" />
-            </div>
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label>Episodes Dubbed (if partial)</label>
-              <input type="text" id="d_episodes" placeholder="1-13" />
-            </div>
-            <div class="form-group">
-              <label>Notes</label>
-              <input type="text" id="d_notes" placeholder="Only S1 dubbed so far" />
-            </div>
+          <div class="form-group">
+            <label>Episodes Dubbed</label>
+            <input type="text" id="d_episodes" placeholder="12" />
           </div>
           <button class="btn btn-primary" onclick="saveDub()">Save Dub</button>
+        </div>
+      </div>
+
+      <!-- ── Edit Dubs ── -->
+      <div class="panel" id="panel-editDubs">
+        <div class="panel-title">Edit Dubs</div>
+        <div id="editDubAlert" class="alert"></div>
+        <div class="card">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Select Anime</label>
+            <input type="text" id="ed_search" placeholder="Search by title…" oninput="filterEditAnime()" style="margin-bottom:8px" />
+            <select id="ed_anime_id" onchange="loadDubsForEdit(this.value)">
+              <option value="">— select —</option>
+            </select>
+          </div>
+        </div>
+        <div id="editDubsWrap">
+          <p style="color:var(--text-muted)">Select an anime to edit its dubs.</p>
         </div>
       </div>
 
@@ -799,7 +828,18 @@
     event.currentTarget.classList.add('active');
 
     if (name === 'listAnime') renderAnimeList(animeCache);
-    if (name === 'addSeason' || name === 'addDub') populateAnimeSelects();
+    if (name === 'addSeason' || name === 'addDub' || name === 'editDubs') populateAnimeSelects();
+    if (name === 'addSeason') {
+      filterAnimeSelect('s_search', 's_anime_id');
+      const seasonAnime = document.getElementById('s_anime_id').value;
+      if (seasonAnime) loadSeasonsForSeasonForm(seasonAnime);
+    }
+    if (name === 'addDub') {
+      filterAnimeSelect('d_search', 'd_anime_id');
+      const dubAnime = document.getElementById('d_anime_id').value;
+      if (dubAnime) loadSeasonsForDub(dubAnime);
+    }
+    if (name === 'editDubs') filterEditAnime();
     if (name === 'listDubs') loadDubsList();
     if (name === 'submissions') loadSubmissions();
     if (name === 'recentUpdates') loadRecentUpdates();
@@ -996,11 +1036,13 @@
   }
 
   function populateAnimeSelects() {
-    ['s_anime_id', 'd_anime_id'].forEach(id => {
+    ['s_anime_id', 'd_anime_id', 'ed_anime_id'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
+      const current = el.value;
       el.innerHTML = '<option value="">— select —</option>' +
         animeCache.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+      if ([...el.options].some(option => option.value === current)) el.value = current;
     });
   }
 
@@ -1217,6 +1259,48 @@
     renderAnimeList(animeCache);
   }
 
+  function filterAnimeSelect(searchId, selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const query = document.getElementById(searchId).value.trim().toLowerCase();
+    const current = select.value;
+    const matches = animeCache.filter(anime => !query || anime.title.toLowerCase().includes(query));
+    if (current && !matches.some(anime => String(anime.id) === current)) {
+      const selected = animeCache.find(anime => String(anime.id) === current);
+      if (selected) matches.unshift(selected);
+    }
+    select.innerHTML = '<option value="">— select —</option>' +
+      matches.map(anime => `<option value="${anime.id}">${esc(anime.title)}</option>`).join('');
+    if (matches.some(anime => String(anime.id) === current)) select.value = current;
+  }
+
+  let dubSeasonCache = [];
+
+  async function loadSeasonsForSeasonForm(animeId) {
+    const wrap = document.getElementById('s_existing');
+    if (!animeId) { wrap.innerHTML = ''; return; }
+    const { data, error } = await supabaseClient
+      .from('seasons')
+      .select('id, season_number, season_name, year')
+      .eq('anime_id', animeId)
+      .order('season_number')
+      .order('id');
+    if (error) { wrap.innerHTML = `<p style="color:var(--red)">${esc(error.message)}</p>`; return; }
+
+    const seasons = data || [];
+    const next = seasons.reduce((max, season) => Math.max(max, season.season_number || 0), 0) + 1;
+    document.getElementById('s_number').value = next;
+    document.getElementById('s_title').value = `Season ${next}`;
+    if (!seasons.length) {
+      wrap.innerHTML = '<p style="color:var(--text-muted);margin-bottom:12px">No seasons yet. This will be the first.</p>';
+      return;
+    }
+    wrap.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:8px">Already added</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+        ${seasons.map(season => `<span class="genre-chip" style="cursor:default">${esc(seasonLabel(season))}${season.year ? ' · ' + season.year : ''}</span>`).join('')}
+      </div>`;
+  }
+
   // ── Save Season ──
   async function saveSeason() {
     const alert = document.getElementById('addSeasonAlert');
@@ -1227,63 +1311,270 @@
       return;
     }
 
+    const year = parseInt(document.getElementById('s_year').value);
     const row = {
       anime_id,
       season_number,
-      season_title: document.getElementById('s_title').value.trim() || null,
-      episodes_start: parseInt(document.getElementById('s_ep_start').value) || null,
-      episodes_end: parseInt(document.getElementById('s_ep_end').value) || null,
+      season_name: document.getElementById('s_title').value.trim() || `Season ${season_number}`,
+      year: Number.isInteger(year) ? year : null,
     };
 
     const { error } = await supabaseClient.from('seasons').insert(row);
     if (error) { showAlert(alert, error.message, 'error'); return; }
-    showAlert(alert, 'Season added!', 'success');
-    ['s_number','s_title','s_ep_start','s_ep_end'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('s_anime_id').value = '';
+    showAlert(alert, `${row.season_name} added. Use Add Dub to record its languages.`, 'success');
+    document.getElementById('s_year').value = '';
+    loadSeasonsForSeasonForm(anime_id);
   }
 
   // ── Load seasons for dub form ──
   async function loadSeasonsForDub(animeId) {
     const sel = document.getElementById('d_season_id');
-    sel.innerHTML = '<option value="">Whole anime / all seasons</option>';
+    document.getElementById('d_new_season').style.display = 'none';
+    sel.innerHTML = '<option value="">— select —</option>';
+    document.querySelectorAll('.d-lang-check').forEach(box => { box.checked = false; });
+    dubSeasonCache = [];
     if (!animeId) return;
-    const { data } = await supabaseClient.from('seasons').select('*').eq('anime_id', animeId).order('season_number');
-    (data || []).forEach(s => {
+
+    const [seasonsRes, dubsRes] = await Promise.all([
+      supabaseClient.from('seasons').select('id, season_number, season_name').eq('anime_id', animeId).order('season_number').order('id'),
+      supabaseClient.from('dubs').select('language').eq('anime_id', animeId),
+    ]);
+    if (seasonsRes.error) {
+      showAlert(document.getElementById('addDubAlert'), seasonsRes.error.message, 'error');
+      return;
+    }
+
+    dubSeasonCache = seasonsRes.data || [];
+    dubSeasonCache.forEach(season => {
       const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = `Season ${s.season_number}${s.season_title ? ' — ' + s.season_title : ''}`;
+      opt.value = season.id;
+      opt.textContent = seasonLabel(season);
       sel.appendChild(opt);
     });
+    const next = document.createElement('option');
+    next.value = 'new';
+    next.textContent = '+ Add next season';
+    sel.appendChild(next);
+
+    const langs = new Set((dubsRes.data || []).map(dub => dub.language));
+    document.querySelectorAll('.d-lang-check').forEach(box => { box.checked = langs.has(box.value); });
+  }
+
+  function toggleNewSeasonFields() {
+    const choice = document.getElementById('d_season_id').value;
+    const isNew = choice === 'new';
+    document.getElementById('d_new_season').style.display = isNew ? 'block' : 'none';
+    if (!choice) return;
+    if (isNew) {
+      const next = dubSeasonCache.reduce((max, season) => Math.max(max, season.season_number || 0), 0) + 1;
+      document.getElementById('d_season_number').value = next;
+      document.getElementById('d_season_name').value = `Season ${next}`;
+      document.getElementById('d_status').value = 'Ongoing';
+      return;
+    }
+    document.getElementById('d_status').value = 'Complete';
   }
 
   // ── Save Dub ──
   async function saveDub() {
     const alert = document.getElementById('addDubAlert');
     const anime_id = document.getElementById('d_anime_id').value;
-    const language = document.getElementById('d_language').value;
     const platform = document.getElementById('d_platform').value;
-    const added_date = document.getElementById('d_date').value;
+    const status = document.getElementById('d_status').value;
+    const seasonChoice = document.getElementById('d_season_id').value;
+    const languages = [...document.querySelectorAll('.d-lang-check:checked')].map(box => box.value);
+    const episodesRaw = document.getElementById('d_episodes').value.trim();
+    const episodes_dubbed = episodesRaw === '' ? null : (/^\d+$/.test(episodesRaw) ? Number(episodesRaw) : episodesRaw);
 
-    if (!anime_id || !language || !platform || !added_date) {
-      showAlert(alert, 'Anime, Language, Platform, and Date are required.', 'error');
+    if (!anime_id || !seasonChoice || !languages.length || !platform || !status) {
+      showAlert(alert, 'Anime, season, at least one language, platform, and status are required.', 'error');
       return;
     }
 
-    const season_id = document.getElementById('d_season_id').value || null;
-    const row = {
-      anime_id, season_id, language, platform,
-      dub_status: document.getElementById('d_status').value,
-      added_date,
-      episodes_dubbed: document.getElementById('d_episodes').value.trim() || null,
-      notes: document.getElementById('d_notes').value.trim() || null,
-    };
+    let season_id = seasonChoice;
+    if (seasonChoice === 'new') {
+      const season_number = parseInt(document.getElementById('d_season_number').value);
+      if (!season_number) {
+        showAlert(alert, 'Season number is required.', 'error');
+        return;
+      }
+      const season_name = document.getElementById('d_season_name').value.trim() || `Season ${season_number}`;
+      const { data, error } = await supabaseClient
+        .from('seasons')
+        .insert({ anime_id, season_number, season_name })
+        .select('id, season_number, season_name')
+        .single();
+      if (error) { showAlert(alert, error.message, 'error'); return; }
+      season_id = data.id;
+    }
 
-    const { error } = await supabaseClient.from('dubs').insert(row);
-    if (error) { showAlert(alert, error.message, 'error'); return; }
-    showAlert(alert, `${language} dub on ${platform} added!`, 'success');
-    ['d_episodes','d_notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('d_season_id').value = '';
-    setTodayDate();
+    const { data: existing } = await supabaseClient
+      .from('dubs')
+      .select('language')
+      .eq('anime_id', anime_id)
+      .eq('season_id', season_id)
+      .eq('platform', platform);
+    const already = new Set((existing || []).map(dub => dub.language));
+    const fresh = languages.filter(language => !already.has(language));
+    if (!fresh.length) {
+      showAlert(alert, `Those languages are already on ${platform} for this season.`, 'error');
+      return;
+    }
+
+    const rows = fresh.map(language => ({
+      anime_id, season_id, language, platform, status, episodes_dubbed,
+    }));
+    const { error } = await supabaseClient.from('dubs').insert(rows);
+    if (error) {
+      if (seasonChoice === 'new') await supabaseClient.from('seasons').delete().eq('id', season_id);
+      showAlert(alert, error.message, 'error');
+      return;
+    }
+
+    let seriesNote = '';
+    if (status === 'Ongoing') {
+      const { error: statusError } = await supabaseClient.from('anime').update({ status: 'Ongoing' }).eq('id', anime_id);
+      seriesNote = statusError ? ' The series status could not be changed.' : ' The series is now marked Ongoing.';
+    }
+
+    const skipped = languages.filter(language => already.has(language));
+    const skippedNote = skipped.length ? ` Skipped ${skipped.join(', ')}, already listed.` : '';
+    showAlert(alert, `${fresh.join(', ')} added on ${platform}.${seriesNote}${skippedNote}`, 'success');
+    document.getElementById('d_episodes').value = '';
+    if (seasonChoice === 'new') await loadSeasonsForDub(anime_id);
+    document.getElementById('d_season_id').value = season_id;
+    document.getElementById('d_new_season').style.display = 'none';
+  }
+
+  const DUB_LANGS = ['Tamil', 'Telugu', 'Hindi', 'Malayalam', 'Kannada', 'English', 'Bengali'];
+  const DUB_PLATFORMS = ['Crunchyroll', 'Amazon Prime Video', 'JioHotstar', 'Muse Asia', 'Sony LIV'];
+  const DUB_STATUSES = ['Complete', 'Partial', 'Ongoing', 'Removed'];
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function dubLangRank(lang) {
+    const i = DUB_LANGS.indexOf(lang);
+    return i === -1 ? DUB_LANGS.length : i;
+  }
+
+  function seasonLabel(season) {
+    const fallback = `Season ${season.season_number}`;
+    return season.season_name && season.season_name !== fallback ? season.season_name : fallback;
+  }
+
+  function selectOptions(values, current) {
+    const list = [...values];
+    if (current && !list.includes(current)) list.push(current);
+    return list.map(value =>
+      `<option value="${esc(value)}"${value === current ? ' selected' : ''}>${esc(value)}</option>`
+    ).join('');
+  }
+
+  function filterEditAnime() {
+    const select = document.getElementById('ed_anime_id');
+    if (!select) return;
+    const query = document.getElementById('ed_search').value.trim().toLowerCase();
+    const current = select.value;
+    const matches = animeCache.filter(anime => !query || anime.title.toLowerCase().includes(query));
+    if (current && !matches.some(anime => String(anime.id) === current)) {
+      const selected = animeCache.find(anime => String(anime.id) === current);
+      if (selected) matches.unshift(selected);
+    }
+    select.innerHTML = '<option value="">— select —</option>' +
+      matches.map(anime => `<option value="${anime.id}">${esc(anime.title)}</option>`).join('');
+    if (matches.some(anime => String(anime.id) === current)) select.value = current;
+  }
+
+  async function loadDubsForEdit(animeId) {
+    const wrap = document.getElementById('editDubsWrap');
+    const alert = document.getElementById('editDubAlert');
+    hideAlert(alert);
+    if (!animeId) {
+      wrap.innerHTML = '<p style="color:var(--text-muted)">Select an anime to edit its dubs.</p>';
+      return;
+    }
+
+    wrap.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+    const [seasonsRes, dubsRes] = await Promise.all([
+      supabaseClient.from('seasons').select('id, season_number, season_name').eq('anime_id', animeId).order('season_number').order('id'),
+      supabaseClient.from('dubs').select('id, season_id, language, platform, status, episodes_dubbed').eq('anime_id', animeId),
+    ]);
+    if (seasonsRes.error || dubsRes.error) {
+      wrap.innerHTML = '';
+      showAlert(alert, (seasonsRes.error || dubsRes.error).message, 'error');
+      return;
+    }
+
+    const seasons = seasonsRes.data || [];
+    const seasonOrder = new Map(seasons.map((season, index) => [String(season.id), index]));
+    const dubs = (dubsRes.data || []).sort((a, b) => {
+      const seasonDiff = (seasonOrder.get(String(a.season_id)) ?? 999) - (seasonOrder.get(String(b.season_id)) ?? 999);
+      return seasonDiff || dubLangRank(a.language) - dubLangRank(b.language) || (a.platform || '').localeCompare(b.platform || '');
+    });
+    if (!dubs.length) {
+      wrap.innerHTML = '<p style="color:var(--text-muted)">No dubs recorded for this anime yet. Use Add Dub to create one.</p>';
+      return;
+    }
+
+    wrap.innerHTML = `<div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr>
+          <th>Season</th><th>Language</th><th>Platform</th><th>Status</th><th>Episodes</th><th></th>
+        </tr></thead>
+        <tbody>${dubs.map(dub => `
+          <tr id="ed-row-${dub.id}">
+            <td style="min-width:180px">
+              <select data-field="season">
+                <option value=""${!dub.season_id ? ' selected' : ''}>No season</option>
+                ${seasons.map(season => `<option value="${season.id}"${String(season.id) === String(dub.season_id) ? ' selected' : ''}>${esc(seasonLabel(season))}</option>`).join('')}
+              </select>
+            </td>
+            <td style="min-width:130px"><select data-field="language">${selectOptions(DUB_LANGS, dub.language)}</select></td>
+            <td style="min-width:170px"><select data-field="platform">${selectOptions(DUB_PLATFORMS, dub.platform)}</select></td>
+            <td style="min-width:130px"><select data-field="status">${selectOptions(DUB_STATUSES, dub.status)}</select></td>
+            <td style="min-width:90px"><input type="text" data-field="episodes" value="${esc(dub.episodes_dubbed ?? '')}" /></td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-primary btn-sm" onclick="saveDubEdit('${dub.id}')">Save</button>
+              <span id="ed-msg-${dub.id}" style="margin-left:8px;font-size:0.78rem"></span>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  async function saveDubEdit(id) {
+    const msg = document.getElementById(`ed-msg-${id}`);
+    const row = document.getElementById(`ed-row-${id}`);
+    const episodes = row.querySelector('[data-field="episodes"]').value.trim();
+    const payload = {
+      season_id: row.querySelector('[data-field="season"]').value || null,
+      language: row.querySelector('[data-field="language"]').value,
+      platform: row.querySelector('[data-field="platform"]').value,
+      status: row.querySelector('[data-field="status"]').value,
+      episodes_dubbed: episodes === '' ? null : (/^\d+$/.test(episodes) ? Number(episodes) : episodes),
+      updated_at: new Date().toISOString(),
+    };
+    if (!payload.language || !payload.platform || !payload.status) {
+      msg.textContent = 'Language, platform, and status are required.';
+      msg.style.color = 'var(--red)';
+      return;
+    }
+
+    msg.textContent = 'Saving…';
+    msg.style.color = 'var(--text-muted)';
+    const { error } = await supabaseClient.from('dubs').update(payload).eq('id', id);
+    if (error) {
+      msg.textContent = error.message;
+      msg.style.color = 'var(--red)';
+      return;
+    }
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--green)';
   }
 
   // ── Browse Dubs ──
