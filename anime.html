@@ -98,6 +98,7 @@
       background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted);
     }
     .meta-tag.ongoing { border-color: var(--green); color: var(--green); }
+    .meta-tag.partial { border-color: var(--yellow); color: var(--yellow); }
     .meta-tag.completed { border-color: var(--blue); color: var(--blue); }
 
     .genre-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
@@ -237,6 +238,7 @@
     'JioCinema': 'https://www.jiocinema.com',
     'JioHotstar': 'https://www.hotstar.com',
     'Muse Asia': 'https://www.youtube.com/@MuseAsia',
+    'Anime Local': 'https://www.tataplay.com/dth/services/entertainment/anime-local',
   };
 
   function posterUrl(anime) {
@@ -289,7 +291,7 @@
     const placeholder = `<div class="poster-placeholder" ${src ? 'style="display:none"' : ''}>${anime.title}</div>`;
 
     const genres = (anime.genre || []).map(g => `<span class="genre-pill">${g}</span>`).join('');
-    const statusCls = anime.status === 'Ongoing' ? 'ongoing' : 'completed';
+    const statusCls = anime.status === 'Ongoing' ? 'ongoing' : anime.status === 'Partial' ? 'partial' : 'completed';
 
     // Group dubs: season-level vs anime-level
     const seasonDubMap = {};

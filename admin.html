@@ -323,7 +323,7 @@
             <div class="form-group">
               <label>Status *</label>
               <select id="a_status">
-                <option>Completed</option><option>Ongoing</option>
+                <option>Completed</option><option>Ongoing</option><option>Partial</option>
               </select>
             </div>
           </div>
@@ -377,6 +377,7 @@
                   <option>JioHotstar</option>
                   <option>Muse Asia</option>
                   <option>Sony LIV</option>
+                  <option>Anime Local</option>
                 </select>
               </div>
               <div>
@@ -489,6 +490,7 @@
                 <option>JioHotstar</option>
                 <option>Muse Asia</option>
                 <option>Sony LIV</option>
+                <option>Anime Local</option>
               </select>
             </div>
             <div class="form-group">
@@ -621,7 +623,7 @@
       <div class="form-group">
         <label>Status</label>
         <select id="e_status">
-          <option>Completed</option><option>Ongoing</option>
+          <option>Completed</option><option>Ongoing</option><option>Partial</option>
         </select>
       </div>
     </div>
@@ -660,6 +662,7 @@
             <option>JioHotstar</option>
             <option>Muse Asia</option>
             <option>Sony LIV</option>
+            <option>Anime Local</option>
           </select>
         </div>
         <div>
@@ -1086,7 +1089,7 @@
             <td>${a.title}</td>
             <td style="color:var(--text-muted)">${a.type}</td>
             <td style="color:var(--text-muted)">${a.year}</td>
-            <td><span style="color:${a.status==='Ongoing'?'var(--green)':'var(--text-muted)'}">${a.status}</span></td>
+            <td><span style="color:${a.status==='Ongoing'?'var(--green)':a.status==='Partial'?'var(--yellow)':'var(--text-muted)'}">${a.status}</span></td>
             <td><button class="btn btn-ghost btn-sm" onclick="openEditModal('${a.id}')">Edit</button></td>
           </tr>`).join('')}
         </tbody>
@@ -1473,7 +1476,7 @@
   }
 
   const DUB_LANGS = ['Tamil', 'Telugu', 'Hindi', 'Malayalam', 'Kannada', 'English', 'Bengali'];
-  const DUB_PLATFORMS = ['Crunchyroll', 'Amazon Prime Video', 'JioHotstar', 'Muse Asia', 'Sony LIV'];
+  const DUB_PLATFORMS = ['Crunchyroll', 'Amazon Prime Video', 'JioHotstar', 'Muse Asia', 'Sony LIV', 'Anime Local'];
   const DUB_STATUSES = ['Complete', 'Partial', 'Ongoing', 'Removed'];
 
   function esc(value) {
