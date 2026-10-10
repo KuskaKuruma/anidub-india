@@ -507,6 +507,10 @@
             <label>Episodes Dubbed</label>
             <input type="text" id="d_episodes" placeholder="12" />
           </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <input type="text" id="d_notes" placeholder="Aired through episode 52" />
+          </div>
           <button class="btn btn-primary" onclick="saveDub()">Save Dub</button>
         </div>
       </div>
@@ -612,6 +616,10 @@
         <label>Total Episodes</label>
         <input type="number" id="e_episodes" />
       </div>
+    </div>
+    <div class="form-group">
+      <label>Seasons</label>
+      <div id="e_season_count" style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:0.9rem">—</div>
     </div>
     <div class="grid-2">
       <div class="form-group">
@@ -1195,6 +1203,23 @@
     document.getElementById('e_title_jp').value = data.japanese_title || '';
     document.getElementById('e_year').value = data.year;
     document.getElementById('e_episodes').value = data.total_episodes || '';
+    const { data: seasonRows } = await supabaseClient
+      .from('seasons')
+      .select('season_number, season_name')
+      .eq('anime_id', id)
+      .order('season_number')
+      .order('id');
+    const seasonList = seasonRows || [];
+    const seasonCount = document.getElementById('e_season_count');
+    if (!seasonList.length) {
+      seasonCount.textContent = 'No seasons yet. Add one under Add Season.';
+    } else {
+      const names = seasonList.map(season => {
+        const fallback = `Season ${season.season_number}`;
+        return season.season_name && season.season_name !== fallback ? season.season_name : fallback;
+      });
+      seasonCount.textContent = `${seasonList.length} season${seasonList.length === 1 ? '' : 's'}: ${names.join(', ')}`;
+    }
     document.getElementById('e_synopsis').value = data.synopsis || '';
     document.getElementById('e_poster_url').value = data.poster_url || '';
     document.getElementById('e_type').value = data.type;
@@ -1414,6 +1439,7 @@
     const languages = [...document.querySelectorAll('.d-lang-check:checked')].map(box => box.value);
     const episodesRaw = document.getElementById('d_episodes').value.trim();
     const episodes_dubbed = episodesRaw === '' ? null : (/^\d+$/.test(episodesRaw) ? Number(episodesRaw) : episodesRaw);
+    const notes = document.getElementById('d_notes').value.trim() || null;
 
     if (!anime_id || !seasonChoice || !languages.length || !platform || !status) {
       showAlert(alert, 'Anime, season, at least one language, platform, and status are required.', 'error');
@@ -1451,7 +1477,7 @@
     }
 
     const rows = fresh.map(language => ({
-      anime_id, season_id, language, platform, status, episodes_dubbed,
+      anime_id, season_id, language, platform, status, episodes_dubbed, notes,
     }));
     const { error } = await supabaseClient.from('dubs').insert(rows);
     if (error) {
@@ -1470,6 +1496,7 @@
     const skippedNote = skipped.length ? ` Skipped ${skipped.join(', ')}, already listed.` : '';
     showAlert(alert, `${fresh.join(', ')} added on ${platform}.${seriesNote}${skippedNote}`, 'success');
     document.getElementById('d_episodes').value = '';
+    document.getElementById('d_notes').value = '';
     if (seasonChoice === 'new') await loadSeasonsForDub(anime_id);
     document.getElementById('d_season_id').value = season_id;
     document.getElementById('d_new_season').style.display = 'none';
@@ -1530,7 +1557,7 @@
     wrap.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
     const [seasonsRes, dubsRes] = await Promise.all([
       supabaseClient.from('seasons').select('id, season_number, season_name').eq('anime_id', animeId).order('season_number').order('id'),
-      supabaseClient.from('dubs').select('id, season_id, language, platform, status, episodes_dubbed').eq('anime_id', animeId),
+      supabaseClient.from('dubs').select('id, season_id, language, platform, status, episodes_dubbed, notes').eq('anime_id', animeId),
     ]);
     if (seasonsRes.error || dubsRes.error) {
       wrap.innerHTML = '';
@@ -1552,7 +1579,7 @@
     wrap.innerHTML = `<div style="overflow-x:auto">
       <table class="data-table">
         <thead><tr>
-          <th>Season</th><th>Language</th><th>Platform</th><th>Status</th><th>Episodes</th><th></th>
+          <th>Season</th><th>Language</th><th>Platform</th><th>Status</th><th>Episodes</th><th>Notes</th><th></th>
         </tr></thead>
         <tbody>${dubs.map(dub => `
           <tr id="ed-row-${dub.id}">
@@ -1566,6 +1593,7 @@
             <td style="min-width:170px"><select data-field="platform">${selectOptions(DUB_PLATFORMS, dub.platform)}</select></td>
             <td style="min-width:130px"><select data-field="status">${selectOptions(DUB_STATUSES, dub.status)}</select></td>
             <td style="min-width:90px"><input type="text" data-field="episodes" value="${esc(dub.episodes_dubbed ?? '')}" /></td>
+            <td style="min-width:180px"><input type="text" data-field="notes" value="${esc(dub.notes ?? '')}" placeholder="Optional note" /></td>
             <td style="white-space:nowrap">
               <button class="btn btn-primary btn-sm" onclick="saveDubEdit('${dub.id}')">Save</button>
               <button class="btn btn-danger btn-sm" onclick="deleteDubEdit('${dub.id}')">Remove</button>
@@ -1581,12 +1609,14 @@
     const msg = document.getElementById(`ed-msg-${id}`);
     const row = document.getElementById(`ed-row-${id}`);
     const episodes = row.querySelector('[data-field="episodes"]').value.trim();
+    const notes = row.querySelector('[data-field="notes"]').value.trim();
     const payload = {
       season_id: row.querySelector('[data-field="season"]').value || null,
       language: row.querySelector('[data-field="language"]').value,
       platform: row.querySelector('[data-field="platform"]').value,
       status: row.querySelector('[data-field="status"]').value,
       episodes_dubbed: episodes === '' ? null : (/^\d+$/.test(episodes) ? Number(episodes) : episodes),
+      notes: notes || null,
       updated_at: new Date().toISOString(),
     };
     if (!payload.language || !payload.platform || !payload.status) {
@@ -1668,8 +1698,9 @@
         const title = item.title.english || item.title.romaji || item.title.native || 'Untitled';
         const extra = [item.title.romaji, item.title.native].filter(name => name && name !== title).join(' · ');
         const meta = [item.format, item.startDate?.year, item.episodes ? `${item.episodes} eps` : ''].filter(Boolean).join(' · ');
+        const poster = item.coverImage?.large || '';
         const mal = item.idMal
-          ? `<span class="mal-id">MAL ID ${item.idMal} <button class="btn btn-ghost btn-sm" onclick="useMalId(${item.idMal})">Use on Add Anime</button></span>`
+          ? `<span class="mal-id">MAL ID ${item.idMal} <button type="button" class="btn btn-ghost btn-sm" data-mal="${item.idMal}" data-poster="${esc(poster)}" onclick="useMalFromButton(this)">Use on Add Anime</button></span>`
           : `<span style="color:var(--yellow);font-size:0.85rem">No MyAnimeList ID on this entry</span>`;
         return `<article class="mal-result">
           <img src="${esc(item.coverImage?.large || '')}" alt="" />
@@ -1688,10 +1719,23 @@
     }
   }
 
-  function useMalId(id) {
+  function useMalFromButton(button) {
+    useMalId(button.dataset.mal, button.dataset.poster);
+  }
+
+  function useMalId(id, poster) {
     document.getElementById('a_mal_id').value = id;
+    if (poster) {
+      document.getElementById('a_poster_url').value = poster;
+      document.getElementById('posterPreview').innerHTML =
+        `<img src="${esc(poster)}" style="max-height:160px;border-radius:6px;margin-top:12px;object-fit:contain" />`;
+    }
     document.querySelector(".sidebar-btn[onclick*=\"showPanel('addAnime')\"]").click();
-    showAlert(document.getElementById('addAnimeAlert'), `MAL ID ${id} filled in.`, 'success');
+    showAlert(
+      document.getElementById('addAnimeAlert'),
+      poster ? `MAL ID ${id} and poster image URL filled in.` : `MAL ID ${id} filled in.`,
+      'success'
+    );
   }
 
   // Close modal on background click
