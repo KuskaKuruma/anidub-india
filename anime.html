@@ -64,8 +64,9 @@
 
     .poster {
       flex-shrink: 0;
+      align-self: flex-start;
       width: 200px;
-      aspect-ratio: 2/3;
+      height: 300px;
       border-radius: 12px;
       overflow: hidden;
       background: var(--surface2);
@@ -197,7 +198,7 @@
 
     @media (max-width: 600px) {
       .hero-inner { flex-direction: column; padding: 24px 16px; }
-      .poster { width: 140px; }
+      .poster { width: 140px; height: 210px; }
       .content { padding: 24px 16px; }
       nav { padding: 0 16px; }
     }
