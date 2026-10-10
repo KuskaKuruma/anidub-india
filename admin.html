@@ -174,6 +174,23 @@
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: rgba(255,255,255,0.02); }
     .data-table select, .data-table input[type=text] { padding: 6px 8px; font-size: 0.82rem; }
+    .mal-result {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; margin-bottom: 12px;
+    }
+    .mal-result img { width: 64px; height: 90px; object-fit: cover; border-radius: 6px; background: var(--surface2); flex-shrink: 0; }
+    .mal-id {
+      display: inline-flex; align-items: center; gap: 8px; margin-right: 8px;
+      background: rgba(34,197,94,0.12); color: var(--green);
+      border: 1px solid rgba(34,197,94,0.35); border-radius: 8px;
+      padding: 5px 10px; font-weight: 700; font-size: 0.85rem;
+    }
+    .anilist-id {
+      display: inline-flex; align-items: center;
+      color: var(--text-muted); font-size: 0.8rem;
+      border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
+    }
 
     /* ── Alerts ── */
     .alert {
@@ -255,13 +272,13 @@
         <div class="sidebar-label">Anime</div>
         <button class="sidebar-btn active" onclick="showPanel('addAnime')">+ Add Anime</button>
         <button class="sidebar-btn" onclick="showPanel('listAnime')">Browse / Edit</button>
+        <button class="sidebar-btn" id="malLookupBtn" onclick="showPanel('malLookup')">MAL ID Lookup</button>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Seasons & Dubs</div>
         <button class="sidebar-btn" onclick="showPanel('addSeason')">+ Add Season</button>
         <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Dub</button>
         <button class="sidebar-btn" onclick="showPanel('editDubs')">Edit Dubs</button>
-        <button class="sidebar-btn" onclick="showPanel('listDubs')">Browse Dubs</button>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Community</div>
@@ -294,7 +311,7 @@
           </div>
           <div class="grid-3">
             <div class="form-group">
-              <label>MAL ID</label>
+              <label>MAL ID <a href="#" onclick="openMalLookup(event)" style="margin-left:8px;color:var(--accent);text-transform:none;letter-spacing:0;font-weight:600">Look up</a></label>
               <input type="number" id="a_mal_id" placeholder="813" />
             </div>
             <div class="form-group">
@@ -510,12 +527,22 @@
         </div>
       </div>
 
-      <!-- ── List Dubs ── -->
-      <div class="panel" id="panel-listDubs">
-        <div class="panel-title">Browse Dubs</div>
-        <div id="dubsListWrap">
-          <p style="color:var(--text-muted)">Loading…</p>
+      <div class="panel" id="panel-malLookup">
+        <div class="panel-title">MAL ID Lookup</div>
+        <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.5;margin:-8px 0 18px">
+          MAL ID is the MyAnimeList number, as in myanimelist.net/anime/38000. AniList’s own ID is different. Search by title, then use the green number on Add Anime.
+        </p>
+        <div id="malLookupAlert" class="alert"></div>
+        <div class="card">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Anime name</label>
+            <div style="display:flex;gap:10px">
+              <input type="text" id="mal_search" placeholder="Demon Slayer" onkeydown="if(event.key==='Enter'){event.preventDefault();searchMalId()}" />
+              <button class="btn btn-primary" id="malSearchBtn" onclick="searchMalId()">Search</button>
+            </div>
+          </div>
         </div>
+        <div id="malLookupResults"></div>
       </div>
 
       <div class="panel" id="panel-submissions">
@@ -840,7 +867,6 @@
       if (dubAnime) loadSeasonsForDub(dubAnime);
     }
     if (name === 'editDubs') filterEditAnime();
-    if (name === 'listDubs') loadDubsList();
     if (name === 'submissions') loadSubmissions();
     if (name === 'recentUpdates') loadRecentUpdates();
   }
@@ -1539,6 +1565,7 @@
             <td style="min-width:90px"><input type="text" data-field="episodes" value="${esc(dub.episodes_dubbed ?? '')}" /></td>
             <td style="white-space:nowrap">
               <button class="btn btn-primary btn-sm" onclick="saveDubEdit('${dub.id}')">Save</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteDubEdit('${dub.id}')">Remove</button>
               <span id="ed-msg-${dub.id}" style="margin-left:8px;font-size:0.78rem"></span>
             </td>
           </tr>`).join('')}
@@ -1577,39 +1604,91 @@
     msg.style.color = 'var(--green)';
   }
 
-  // ── Browse Dubs ──
-  async function loadDubsList() {
-    const { data } = await supabase
-      .from('dubs')
-      .select('*, anime(title)')
-      .order('added_date', { ascending: false })
-      .limit(100);
-
-    const wrap = document.getElementById('dubsListWrap');
-    if (!data || !data.length) { wrap.innerHTML = '<p style="color:var(--text-muted)">No dubs yet.</p>'; return; }
-
-    wrap.innerHTML = `<div style="overflow-x:auto">
-      <table class="data-table">
-        <thead><tr><th>Anime</th><th>Language</th><th>Platform</th><th>Status</th><th>Date</th><th></th></tr></thead>
-        <tbody>${data.map(d => `
-          <tr>
-            <td>${d.anime?.title || '—'}</td>
-            <td>${d.language}</td>
-            <td style="color:var(--text-muted)">${d.platform}</td>
-            <td><span style="color:${d.dub_status==='Complete'?'var(--green)':d.dub_status==='Removed'?'var(--red)':'var(--yellow)'}">${d.dub_status}</span></td>
-            <td style="color:var(--text-muted)">${d.added_date}</td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteDub('${d.id}')">Remove</button></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-  }
-
-  async function deleteDub(id) {
-    if (!confirm('Remove this dub record?')) return;
+  async function deleteDubEdit(id) {
+    if (!confirm('Remove this dub?')) return;
     const { error } = await supabaseClient.from('dubs').delete().eq('id', id);
     if (error) { alert(error.message); return; }
-    loadDubsList();
+    loadDubsForEdit(document.getElementById('ed_anime_id').value);
+  }
+
+  function openMalLookup(event) {
+    event.preventDefault();
+    const title = document.getElementById('a_title').value.trim();
+    if (title) document.getElementById('mal_search').value = title;
+    document.getElementById('malLookupBtn').click();
+    if (title) searchMalId();
+  }
+
+  async function searchMalId() {
+    const alert = document.getElementById('malLookupAlert');
+    const results = document.getElementById('malLookupResults');
+    const button = document.getElementById('malSearchBtn');
+    const search = document.getElementById('mal_search').value.trim();
+    hideAlert(alert);
+    results.innerHTML = '';
+    if (!search) {
+      showAlert(alert, 'Enter an anime name.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    results.innerHTML = '<p style="color:var(--text-muted)">Searching AniList…</p>';
+    const query = `
+      query ($search: String) {
+        Page(perPage: 8) {
+          media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+            id
+            idMal
+            format
+            episodes
+            title { romaji english native }
+            coverImage { large }
+            startDate { year }
+          }
+        }
+      }
+    `;
+    try {
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables: { search } })
+      });
+      const json = await response.json();
+      if (!response.ok || json.errors) throw new Error(json.errors?.[0]?.message || 'AniList search failed');
+      const media = json.data?.Page?.media || [];
+      if (!media.length) {
+        results.innerHTML = '<p style="color:var(--text-muted)">No anime found for that name.</p>';
+        return;
+      }
+      results.innerHTML = media.map(item => {
+        const title = item.title.english || item.title.romaji || item.title.native || 'Untitled';
+        const extra = [item.title.romaji, item.title.native].filter(name => name && name !== title).join(' · ');
+        const meta = [item.format, item.startDate?.year, item.episodes ? `${item.episodes} eps` : ''].filter(Boolean).join(' · ');
+        const mal = item.idMal
+          ? `<span class="mal-id">MAL ID ${item.idMal} <button class="btn btn-ghost btn-sm" onclick="useMalId(${item.idMal})">Use on Add Anime</button></span>`
+          : `<span style="color:var(--yellow);font-size:0.85rem">No MyAnimeList ID on this entry</span>`;
+        return `<article class="mal-result">
+          <img src="${esc(item.coverImage?.large || '')}" alt="" />
+          <div>
+            <div style="font-weight:700;margin-bottom:2px">${esc(title)}</div>
+            <div style="color:var(--text-muted);font-size:0.82rem;margin-bottom:10px">${esc([extra, meta].filter(Boolean).join(' — '))}</div>
+            <div>${mal} <span class="anilist-id">AniList ID ${item.id}</span></div>
+          </div>
+        </article>`;
+      }).join('');
+    } catch (error) {
+      results.innerHTML = '';
+      showAlert(alert, error.message || 'Search failed.', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function useMalId(id) {
+    document.getElementById('a_mal_id').value = id;
+    document.querySelector(".sidebar-btn[onclick*=\"showPanel('addAnime')\"]").click();
+    showAlert(document.getElementById('addAnimeAlert'), `MAL ID ${id} filled in.`, 'success');
   }
 
   // Close modal on background click
