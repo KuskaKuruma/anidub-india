@@ -387,6 +387,7 @@
                   <option value="Complete">Complete</option>
                   <option value="Partial">Partial</option>
                   <option value="Ongoing">Ongoing</option>
+                  <option value="Yet to dub">Yet to dub</option>
                 </select>
               </div>
             </div>
@@ -498,6 +499,7 @@
               <select id="d_status">
                 <option>Complete</option>
                 <option>Ongoing</option>
+                <option>Yet to dub</option>
                 <option>Partial</option>
                 <option>Removed</option>
               </select>
@@ -680,6 +682,7 @@
             <option value="Complete">Complete</option>
             <option value="Partial">Partial</option>
             <option value="Ongoing">Ongoing</option>
+            <option value="Yet to dub">Yet to dub</option>
           </select>
         </div>
       </div>
@@ -1504,7 +1507,7 @@
 
   const DUB_LANGS = ['Tamil', 'Telugu', 'Hindi', 'Malayalam', 'Kannada', 'English', 'Bengali'];
   const DUB_PLATFORMS = ['Crunchyroll', 'Amazon Prime Video', 'JioHotstar', 'Muse Asia', 'Sony LIV', 'Anime Local'];
-  const DUB_STATUSES = ['Complete', 'Partial', 'Ongoing', 'Removed'];
+  const DUB_STATUSES = ['Complete', 'Partial', 'Ongoing', 'Yet to dub', 'Removed'];
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, c => ({

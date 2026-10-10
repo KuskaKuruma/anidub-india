@@ -166,6 +166,7 @@
     }
     .status-badge.complete { background: rgba(34,197,94,0.15); color: var(--green); }
     .status-badge.partial { background: rgba(234,179,8,0.15); color: var(--yellow); }
+    .status-badge.yet { background: rgba(136,136,170,0.15); color: var(--text-muted); }
     .status-badge.removed { background: rgba(239,68,68,0.15); color: var(--red); }
 
     .platform-link {
@@ -256,7 +257,7 @@
   }
 
   function statusClass(s) {
-    const m = { 'Complete': 'complete', 'Partial': 'partial', 'Removed': 'removed' };
+    const m = { 'Complete': 'complete', 'Partial': 'partial', 'Yet to dub': 'yet', 'Removed': 'removed' };
     return m[s] || 'complete';
   }
 
