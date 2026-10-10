@@ -511,7 +511,7 @@
           </div>
           <div class="form-group">
             <label>Notes</label>
-            <input type="text" id="d_notes" placeholder="Aired through episode 52" />
+            <input type="text" id="d_notes" placeholder="Optional" />
           </div>
           <button class="btn btn-primary" onclick="saveDub()">Save Dub</button>
         </div>
@@ -1497,7 +1497,12 @@
 
     const skipped = languages.filter(language => already.has(language));
     const skippedNote = skipped.length ? ` Skipped ${skipped.join(', ')}, already listed.` : '';
-    showAlert(alert, `${fresh.join(', ')} added on ${platform}.${seriesNote}${skippedNote}`, 'success');
+    const animeName = document.getElementById('d_anime_id').selectedOptions[0]?.text || 'this anime';
+    const seasonName = seasonChoice === 'new'
+      ? (document.getElementById('d_season_name').value.trim() || `Season ${document.getElementById('d_season_number').value}`)
+      : (document.getElementById('d_season_id').selectedOptions[0]?.text || 'this season');
+    const episodeNote = episodes_dubbed == null ? '' : `, ${episodes_dubbed} episode${Number(episodes_dubbed) === 1 ? '' : 's'}`;
+    showAlert(alert, `${animeName}, ${seasonName}, ${platform}${episodeNote}, ${status}, ${fresh.join(', ')} added.${seriesNote}${skippedNote}`, 'success');
     document.getElementById('d_episodes').value = '';
     document.getElementById('d_notes').value = '';
     if (seasonChoice === 'new') await loadSeasonsForDub(anime_id);
