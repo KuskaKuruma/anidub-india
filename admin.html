@@ -1683,7 +1683,7 @@
             format
             episodes
             title { romaji english native }
-            coverImage { large }
+            coverImage { extraLarge large }
             startDate { year }
           }
         }
@@ -1706,12 +1706,12 @@
         const title = item.title.english || item.title.romaji || item.title.native || 'Untitled';
         const extra = [item.title.romaji, item.title.native].filter(name => name && name !== title).join(' · ');
         const meta = [item.format, item.startDate?.year, item.episodes ? `${item.episodes} eps` : ''].filter(Boolean).join(' · ');
-        const poster = item.coverImage?.large || '';
+        const poster = item.coverImage?.extraLarge || item.coverImage?.large || '';
         const mal = item.idMal
           ? `<span class="mal-id">MAL ID ${item.idMal} <button type="button" class="btn btn-ghost btn-sm" data-mal="${item.idMal}" data-poster="${esc(poster)}" onclick="useMalFromButton(this)">Use on Add Anime</button></span>`
           : `<span style="color:var(--yellow);font-size:0.85rem">No MyAnimeList ID on this entry</span>`;
         return `<article class="mal-result">
-          <img src="${esc(item.coverImage?.large || '')}" alt="" />
+          <img src="${esc(poster)}" alt="" />
           <div>
             <div style="font-weight:700;margin-bottom:2px">${esc(title)}</div>
             <div style="color:var(--text-muted);font-size:0.82rem;margin-bottom:10px">${esc([extra, meta].filter(Boolean).join(' — '))}</div>

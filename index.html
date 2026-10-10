@@ -612,12 +612,17 @@
     return map;
   }
 
+  function sharperPoster(url) {
+    if (!url) return null;
+    return url.replace('/cover/medium/', '/cover/large/');
+  }
+
   function posterUrl(anime) {
     if (anime.poster_path) {
       const { data } = supabaseClient.storage.from('posters').getPublicUrl(anime.poster_path);
       return data.publicUrl;
     }
-    return anime.poster_url || null;
+    return sharperPoster(anime.poster_url);
   }
 
   /* Fetch missing posters from AniList using MAL ID only (exact match) */
@@ -629,7 +634,7 @@
     for (let start = 0; start < missing.length; start += BATCH) {
       const batch = missing.slice(start, start + BATCH);
       const queries = batch.map((a, i) =>
-        `a${i}: Media(idMal: ${a.mal_id}, type: ANIME) { coverImage { large } title { romaji english } }`
+        `a${i}: Media(idMal: ${a.mal_id}, type: ANIME) { coverImage { extraLarge large } title { romaji english } }`
       );
 
       try {
@@ -642,7 +647,8 @@
         if (!json.data) continue;
         batch.forEach((a, i) => {
           const media = json.data[`a${i}`];
-          if (!media?.coverImage?.large) return;
+          const cover = media?.coverImage?.extraLarge || media?.coverImage?.large;
+          if (!cover) return;
 
           const normalize = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const ourTitle = normalize(a.title);
@@ -658,7 +664,7 @@
           const img = card.querySelector('img.poster-anilist');
           const placeholder = card.querySelector('.poster-placeholder');
           if (img) {
-            img.src = media.coverImage.large;
+            img.src = cover;
             img.style.display = 'block';
             if (placeholder) placeholder.style.display = 'none';
           }

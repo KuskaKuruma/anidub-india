@@ -517,7 +517,7 @@ function submitFeedback() {
             media {
               id
               title { romaji english }
-              coverImage { large }
+              coverImage { extraLarge large }
               siteUrl
               format
             }
@@ -650,8 +650,9 @@ function submitFeedback() {
           card.target = '_blank';
           card.rel = 'noopener';
 
-          const posterHTML = e.media.coverImage?.large
-            ? `<img class="card-poster" src="${e.media.coverImage.large}" alt="${title}" loading="lazy" />`
+          const poster = e.media.coverImage?.extraLarge || e.media.coverImage?.large;
+          const posterHTML = poster
+            ? `<img class="card-poster" src="${poster}" alt="${title}" loading="lazy" />`
             : `<div class="card-poster-placeholder">🎬</div>`;
 
           card.innerHTML = `

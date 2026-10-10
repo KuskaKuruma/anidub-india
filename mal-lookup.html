@@ -137,7 +137,7 @@
             format
             episodes
             title { romaji english native }
-            coverImage { large }
+            coverImage { extraLarge large }
             startDate { year }
           }
         }
@@ -168,7 +168,7 @@
           ? `<span class="mal">MAL ID ${item.idMal} <button type="button" class="copy" data-id="${item.idMal}">Copy</button></span>`
           : `<span class="missing">No MyAnimeList ID on this entry</span>`;
         return `<article class="result">
-          <img src="${esc(item.coverImage?.large || '')}" alt="" />
+          <img src="${esc(item.coverImage?.extraLarge || item.coverImage?.large || '')}" alt="" />
           <div>
             <h2>${esc(title)}</h2>
             <div class="sub">${esc([extra, meta].filter(Boolean).join(' — '))}</div>
