@@ -824,6 +824,7 @@
           ${s.review_status === 'approved' ? `
           <button onclick="prefillAndMarkAdded(${JSON.stringify(s).replace(/"/g,'&quot;')})" style="padding:7px 20px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">→ Add to Database</button>
           ` : ''}
+          <button onclick="deleteSubmission(${s.id})" style="padding:7px 20px;background:transparent;color:var(--red);border:1px solid rgba(239,68,68,0.4);border-radius:7px;font-weight:600;cursor:pointer;font-size:0.85rem">Delete</button>
         </div>
       </div>`;
     };
@@ -838,6 +839,18 @@
 
   async function updateSubmission(id, status) {
     await supabaseClient.from('submissions').update({ review_status: status }).eq('id', id);
+    loadSubmissions();
+  }
+
+  async function deleteSubmission(id) {
+    const row = _subsData.find(s => s.id === id);
+    const title = row?.anime_title || 'this submission';
+    if (!confirm(`Delete the submission for "${title}"? This cannot be undone.`)) return;
+    const { error } = await supabaseClient.from('submissions').delete().eq('id', id);
+    if (error) {
+      document.getElementById('subsWrap').insertAdjacentHTML('afterbegin', `<p style="color:var(--red)">${error.message}</p>`);
+      return;
+    }
     loadSubmissions();
   }
 
