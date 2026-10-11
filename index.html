@@ -614,7 +614,8 @@
 
   function sharperPoster(url) {
     if (!url) return null;
-    return url.replace('/cover/medium/', '/cover/large/');
+    // Newer AniList files use bx… and have a larger copy. Older b… files do not.
+    return url.replace('/cover/medium/bx', '/cover/large/bx');
   }
 
   function posterUrl(anime) {
