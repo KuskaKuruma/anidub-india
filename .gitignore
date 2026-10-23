@@ -2,3 +2,13 @@
 old/
 Dub Data/
 Plan/
+
+# Secrets — fix-mal-ids.js holds a Supabase service_role key
+fix-mal-ids.js
+.dev.vars
+.env
+*.local
+
+# Dependencies and build tooling
+node_modules/
+.wrangler/
