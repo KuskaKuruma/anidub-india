@@ -12,3 +12,4 @@ fix-mal-ids.js
 # Dependencies and build tooling
 node_modules/
 .wrangler/
+supabase/.temp/

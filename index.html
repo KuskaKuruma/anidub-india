@@ -216,10 +216,9 @@
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border);
-      cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-      text-decoration: none;
       color: inherit;
+      text-decoration: none;
       display: block;
     }
     .anime-card:hover {
@@ -295,7 +294,6 @@
       display: flex;
       gap: 8px;
     }
-
     /* ── Skeleton ── */
     .skeleton {
       background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
@@ -540,6 +538,7 @@
 </footer>
 
 <script src="supabase-config.js"></script>
+<script src="account.js"></script>
 <script>
   const PAGE_SIZE = 24; // divisible by 6,4,3,2 — no orphan last row
   let currentPage = 1;
@@ -619,10 +618,7 @@
   }
 
   function posterUrl(anime) {
-    if (anime.poster_path) {
-      const { data } = supabaseClient.storage.from('posters').getPublicUrl(anime.poster_path);
-      return data.publicUrl;
-    }
+    // poster_url is AniList or a Supabase Storage public URL after admin upload.
     return sharperPoster(anime.poster_url);
   }
 

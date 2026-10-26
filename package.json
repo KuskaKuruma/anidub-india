@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.115.0",
+    "pg": "^8.16.0"
+  },
+  "scripts": {
+    "migrate:verify-setup": "node migrate/verify-setup.mjs"
+  }
+}

@@ -19,12 +19,22 @@ Do not move just to avoid the $25 Supabase Pro plan. Cloudflare Workers Paid is 
 
 | Data | Move |
 |---|---|
-| `anime`, `seasons`, `dubs`, `submissions`, `recent_updates` | Export and import |
+| `anime`, `seasons`, `dubs`, `submissions`, `recent_updates`, `profiles` | Export and import |
 | Poster files in the `posters` bucket | Copy to Cloudflare R2. Almost every cover is an AniList URL in `poster_url` and does not need copying |
-| Admin password | Create the admin account again. Supabase password hashes cannot be imported |
-| Row Level Security policies | Rewrite them. D1 has no Supabase Auth and no policies the browser can use |
+| Logins (email and password) | Do **not** export password hashes. Keep Auth on Supabase, or ask each person to set a password once on the new system. See below |
+| Row Level Security policies | Rewrite them inside the Worker. D1 has no Supabase Auth and no policies the browser can use |
 
 `genre` is a Postgres text array. Store it as a JSON text column in D1. `recent_updates` uses `updates_id`, not `id`. Keep that name or update every query that reads it.
+
+## How accounts stay smooth
+
+Copying `auth.users.encrypted_password` into D1 is not the plan. Those hashes are not meant to leave Supabase, a CSV of them is a leak risk, and a home-grown login on a Worker is easy to get wrong.
+
+**Preferred: keep Auth on Supabase.** Move only the catalog, posters, and `profiles` to Cloudflare. The site still signs people in with Supabase Auth. Email and password never move. Usernames stay linked by the same `user_id`. This is the smooth path.
+
+**If Auth must leave Supabase later:** export only `id` and `email` (no passwords). Create matching accounts on the new login system with those emails, keep the same ids so `profiles` still match, and send a one-time “set your password” mail. People use the same email; they choose a password once. That is slower for visitors than the hybrid path, but it is honest and safe.
+
+Do not store passwords in `profiles` or any public table now. That would not help a future move.
 
 ## Order of work
 
@@ -39,10 +49,11 @@ Do not move just to avoid the $25 Supabase Pro plan. Cloudflare Workers Paid is 
 
 Workers Free is enough for the copy itself: 500 MB per D1 database, 5 GB across the account, 5 million row reads a day, 100,000 row writes a day. Over the daily cap, queries fail until midnight UTC. R2 includes 10 GB of files with no transfer fee.
 
-Workers Paid ($5 a month) is the plan to turn on if daily reads or writes hit those caps, or one database needs more than 500 MB. It includes 5 GB of D1 storage, then $0.75 per GB, up to 10 GB per database, and 10 million Worker requests a month. It still does not include user accounts.
+Workers Paid ($5 a month) is the plan to turn on if daily reads or writes hit those caps, or one database needs more than 500 MB. It includes 5 GB of D1 storage, then $0.75 per GB, up to 10 GB per database, and 10 million Worker requests a month. It still does not include user accounts. Keep Supabase Auth Free for logins until that part is replaced on purpose.
 
 ## What not to do in the same change
 
-- Do not rewrite login and watchlists during the move. Build those on Supabase first. A `watchlist` table exports like any other table.
+- Do not rebuild login during the catalog move. Leave Auth on Supabase until the library and anime pages work on Cloudflare.
+- Do not export or copy password hashes into D1, CSVs, or git.
 - Do not commit API tokens, the Supabase service role key, or Cloudflare API tokens.
 - Do not delete the Supabase project in the same week as the import.

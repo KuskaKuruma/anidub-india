@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My List — AniDub India</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2c;
+      --border: #2a2a3d;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --accent-soft: rgba(124,58,237,0.15);
+      --text: #e2e2f0;
+      --text-muted: #8888aa;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --card-w: 180px;
+    }
+
+
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,13,20,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      height: 60px;
+    }
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .nav-logo span { color: var(--text); }
+    .nav-links { display: flex; gap: 20px; margin-left: auto; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.admin-link { display: none; }
+
+
+    /* ── Page ── */
+    .page { max-width: 1240px; margin: 0 auto; padding: 36px 24px 80px; }
+    .page h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 6px; }
+    .page .lead { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; }
+
+    /* ── Status tabs ── */
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .tab {
+      padding: 7px 16px; border-radius: 20px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-muted); font-family: inherit; font-size: 0.87rem; font-weight: 600;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .tab:hover { color: var(--text); border-color: var(--accent); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tab .n { opacity: 0.75; margin-left: 5px; font-weight: 500; }
+
+    /* ── Status pill on each card ── */
+    .watch-pill {
+      position: absolute; top: 8px; left: 8px; z-index: 2;
+      padding: 3px 9px; border-radius: 6px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.02em;
+      background: rgba(13,13,20,0.82); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .watch-pill.watching      { color: var(--green);  border-color: var(--green); }
+    .watch-pill.completed     { color: var(--accent); border-color: var(--accent); }
+    .watch-pill.plan_to_watch { color: var(--text-muted); }
+
+    .grid-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .anime-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1280px) {
+      .anime-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .anime-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .anime-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    }
+    .anime-card {
+      background: var(--surface);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      color: inherit;
+      text-decoration: none;
+      display: block;
+    }
+    .anime-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      border-color: var(--accent);
+    }
+    .poster-wrap {
+      position: relative;
+      padding-top: 142%; /* 2:3 ratio */
+      background: var(--surface2);
+      overflow: hidden;
+    }
+    .poster-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .poster-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      line-height: 1.4;
+    }
+    .poster-placeholder::before {
+      content: '🎬';
+      font-size: 2rem;
+      opacity: 0.4;
+    }
+    .dub-badges {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .dub-badge {
+      background: rgba(124,58,237,0.85);
+      color: #fff;
+      font-size: 0.62rem;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+    .card-body { padding: 10px 12px 12px; }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+    }
+    /* ── Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .skeleton-card { border-radius: 12px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+    .skeleton-poster { padding-top: 142%; background: inherit; }
+    .skeleton-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .skeleton-line { height: 12px; border-radius: 4px; }
+
+    /* ── Empty state ── */
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted);
+    }
+    .empty svg { margin-bottom: 16px; opacity: 0.3; }
+    .empty p { font-size: 1rem; }
+
+
+    /* ── Signed-out / empty states ── */
+    .notice {
+      text-align: center; padding: 70px 24px; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    }
+    .notice h2 { color: var(--text); font-size: 1.2rem; margin-bottom: 8px; }
+    .notice p { font-size: 0.93rem; line-height: 1.6; margin-bottom: 20px; }
+    .notice a.cta {
+      display: inline-block; padding: 10px 22px; border-radius: 9px;
+      background: var(--accent); color: #fff; text-decoration: none; font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .notice a.cta:hover { background: var(--accent); filter: brightness(1.1); }
+
+    @media (max-width: 600px) {
+      .page { padding: 24px 16px 60px; }
+      nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
+  <div class="nav-links">
+    <a href="index.html">Dub Library</a>
+    <a href="schedule.html">Airing Now</a>
+    <a href="submit.html">Add a Dub</a>
+  </div>
+</nav>
+
+<div class="page">
+  <h1>My List</h1>
+  <p class="lead">Anime you are tracking.</p>
+  <div class="tabs" id="tabs"></div>
+  <div id="content"><p style="color:var(--text-muted)">Loading…</p></div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="account.js"></script>
+<script>
+  const STATUSES = [
+    { key: 'all',           label: 'All' },
+    { key: 'watching',      label: 'Watching' },
+    { key: 'completed',     label: 'Completed' },
+    { key: 'plan_to_watch', label: 'Plan to watch' },
+  ];
+  const LABEL = { watching: 'Watching', completed: 'Completed', plan_to_watch: 'Plan to watch' };
+
+  let active = 'all';
+  let rows = [];
+  let counts = {};
+
+  const esc = (v) => String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  /* Same AniList trick the library uses: the larger cover exists only for
+     newer bx… files. */
+  function sharperPoster(url) {
+    return url ? url.replace('/cover/medium/bx', '/cover/large/bx') : null;
+  }
+  function cover(anime) {
+    return sharperPoster(anime.poster_url);
+  }
+
+  function renderTabs() {
+    document.getElementById('tabs').innerHTML = STATUSES.map(s => {
+      const n = s.key === 'all' ? (counts.total || 0) : (counts[s.key] || 0);
+      return `<button class="tab ${active === s.key ? 'active' : ''}"
+                onclick="pick('${s.key}')">${s.label}<span class="n">${n}</span></button>`;
+    }).join('');
+  }
+
+  function card(anime) {
+    const src = cover(anime);
+    const img = src
+      ? `<img src="${esc(src)}" alt="${esc(anime.title)}" loading="lazy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const placeholder = `<div class="poster-placeholder" ${src ? 'style="display:none"' : ''}>${esc(anime.title)}</div>`;
+    const status = anime.watch_status;
+
+    return `<a class="anime-card" href="anime.html?id=${anime.id}" title="${esc(anime.title)}">
+      <div class="poster-wrap">
+        <span class="watch-pill ${status}">${LABEL[status] || status}</span>
+        ${img}${placeholder}
+      </div>
+      <div class="card-body">
+        <div class="card-title">${esc(anime.title)}</div>
+        <div class="card-meta">
+          <span>${esc(anime.type || '')}</span>
+          <span>${esc(anime.year || '')}</span>
+        </div>
+      </div>
+    </a>`;
+  }
+
+  function renderList() {
+    const el = document.getElementById('content');
+    const shown = active === 'all' ? rows : rows.filter(r => r.watch_status === active);
+
+    if (!rows.length) {
+      el.innerHTML = `<div class="notice">
+        <h2>Nothing here yet</h2>
+        <p>Open any anime and choose Watching, Completed or Plan to watch.</p>
+        <a class="cta" href="index.html">Browse the library</a>
+      </div>`;
+      return;
+    }
+    if (!shown.length) {
+      el.innerHTML = `<div class="notice"><h2>Nothing in ${esc(LABEL[active] || active)}</h2>
+        <p>Try another tab.</p></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="anime-grid">${shown.map(card).join('')}</div>`;
+  }
+
+  function pick(key) {
+    active = key;
+    renderTabs();
+    renderList();
+  }
+
+  (async function start() {
+    const user = await window.auth.currentUser();
+
+    if (!user) {
+      document.getElementById('tabs').innerHTML = '';
+      document.getElementById('content').innerHTML = `<div class="notice">
+        <h2>Log in to keep a list</h2>
+        <p>Track what you are watching, what you have finished,<br>and what you mean to get to.</p>
+        <a class="cta" href="login.html?next=${encodeURIComponent('watchlist.html')}">Continue with Google</a>
+      </div>`;
+      return;
+    }
+
+    // Row Level Security returns only this person's rows.
+    const { data, error } = await supabaseClient
+      .from('watchlist')
+      .select('status, created_at, updated_at, anime:anime_id (id, title, type, year, poster_url)');
+    if (error) {
+      console.error(error);
+      document.getElementById('content').innerHTML =
+        '<div class="notice"><h2>Could not load your list</h2><p>Please try again.</p></div>';
+      return;
+    }
+
+    const changed = (r) => r.updated_at || r.created_at || '';
+    rows = (data || [])
+      .filter(r => r.anime)
+      .sort((a, b) => changed(b).localeCompare(changed(a)))
+      .map(r => ({ ...r.anime, watch_status: r.status }));
+    counts = { total: rows.length };
+    for (const r of rows) counts[r.watch_status] = (counts[r.watch_status] || 0) + 1;
+
+    renderTabs();
+    renderList();
+  })();
+</script>
+</body>
+</html>

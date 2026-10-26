@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — AniDub India</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d14; --surface: #16161f; --surface2: #1e1e2c; --border: #2a2a3d;
+      --accent: #7c3aed; --text: #e2e2f0; --text-muted: #8888aa; --green: #22c55e; --red: #ef4444;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+    nav { display: flex; align-items: center; padding: 0 24px; height: 60px; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .nav-logo { font-weight: 800; font-size: 1.15rem; color: var(--text); text-decoration: none; }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 20px; margin-left: auto; align-items: center; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+    .nav-links a:hover { color: var(--text); }
+    .card { max-width: 420px; margin: 48px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    h1 { font-size: 1.4rem; margin-bottom: 6px; }
+    p.lead { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
+    label { display: block; font-size: 0.78rem; color: var(--text-muted); margin: 12px 0 6px; }
+    input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font: inherit; }
+    input[readonly] { color: var(--text-muted); }
+    select {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font: inherit; margin-bottom: 0;
+    }
+    .phone-row { display: flex; gap: 8px; }
+    .phone-row select { width: 148px; flex: 0 0 148px; }
+    .phone-row input { flex: 1; width: auto; min-width: 0; }
+    button { margin-top: 18px; width: 100%; padding: 10px 16px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+    .switch { margin-top: 14px; background: none; color: var(--text-muted); font-weight: 600; }
+    .msg { margin-top: 14px; font-size: 0.88rem; }
+    .msg.error { color: var(--red); }
+    .msg.ok { color: var(--green); }
+    .google-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: #fff; color: #1f1f1f; font-size: 0.95rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; text-decoration: none; transition: filter 0.15s;
+      margin-top: 0;
+    }
+    .google-btn:hover { filter: brightness(0.94); }
+    .google-btn:disabled { opacity: 0.6; cursor: default; }
+    .google-btn svg { flex-shrink: 0; }
+    .signed-in { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+    .signed-in strong { color: var(--text); }
+  </style>
+</head>
+<body data-account-nav="off">
+<nav>
+  <a class="nav-logo" href="index.html">Ani<span>Dub</span> India</a>
+  <div class="nav-links">
+    <a href="index.html">Dub Library</a>
+    <a href="schedule.html">Airing Now</a>
+    <a href="submit.html">Add a Dub</a>
+  </div>
+</nav>
+
+<main class="card">
+  <h1 id="title">Log in</h1>
+  <p class="lead" id="lead">Sign in with Google. The library stays available without an account.</p>
+
+  <!-- Signed out: one button, no password to choose or forget. -->
+  <div id="signedOut">
+    <button type="button" class="google-btn" id="googleBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Continue with Google
+    </button>
+  </div>
+
+  <!-- Signed in: username, preferred dub language, optional phone. -->
+  <div id="signedIn" style="display:none">
+    <p class="signed-in">Signed in as <strong id="whoami"></strong></p>
+    <form id="profileForm">
+      <label for="username">Username</label>
+      <input id="username" type="text" autocomplete="username" minlength="3" maxlength="20"
+             placeholder="Shown in the top right" />
+      <label for="language">Preferred dub language</label>
+      <select id="language">
+        <option value="">No preference</option>
+        <option value="Tamil">Tamil</option>
+        <option value="Telugu">Telugu</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Malayalam">Malayalam</option>
+        <option value="Kannada">Kannada</option>
+      </select>
+      <label for="phone">Phone number <span style="font-weight:400">(optional)</span></label>
+      <div class="phone-row">
+        <select id="countryCode" aria-label="Country code">
+          <option value="+91" selected>India +91</option>
+          <option value="+977">Nepal +977</option>
+          <option value="+94">Sri Lanka +94</option>
+          <option value="+880">Bangladesh +880</option>
+          <option value="+971">UAE +971</option>
+          <option value="+966">Saudi Arabia +966</option>
+          <option value="+65">Singapore +65</option>
+          <option value="+60">Malaysia +60</option>
+          <option value="+1">US / Canada +1</option>
+          <option value="+44">UK +44</option>
+          <option value="+61">Australia +61</option>
+          <option value="+81">Japan +81</option>
+        </select>
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="16"
+               placeholder="10 digits" />
+      </div>
+      <button type="submit" id="saveBtn">Save</button>
+    </form>
+    <button class="switch" type="button" id="signOutBtn">Log out</button>
+  </div>
+
+  <p class="msg" id="msg"></p>
+</main>
+
+<script src="supabase-config.js"></script>
+<script src="account.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const msg = document.getElementById('msg');
+
+  function show(text, ok) {
+    msg.textContent = text;
+    msg.className = 'msg ' + (ok ? 'ok' : 'error');
+  }
+
+  /** Same-site relative pages only, and never the admin panel. */
+  function safeNext() {
+    const next = params.get('next') || 'index.html';
+    if (!/^[a-z0-9.-]+\.html(\?[^#]*)?$/i.test(next)) return 'index.html';
+    if (next.toLowerCase().startsWith('admin')) return 'index.html';
+    return next;
+  }
+
+  // Google sends a cancelled sign-in back with an error on the URL.
+  if (params.has('error') || /error_description=/.test(location.hash)) {
+    show('Sign-in was cancelled.', false);
+  }
+
+  document.getElementById('googleBtn').addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try {
+      await window.auth.signIn(safeNext());
+    } catch (err) {
+      event.currentTarget.disabled = false;
+      show(err.message || 'Could not start sign-in.', false);
+    }
+  });
+
+  function savedSummary(saved) {
+    const phone = saved.phone
+      ? `phone number ${saved.phone.slice(0, saved.phone.length - 10)} ${saved.phone.slice(-10)}`
+      : 'no phone number';
+    const language = saved.preferred_language
+      ? `language ${saved.preferred_language}`
+      : 'no preferred language';
+    return `Saved username ${saved.username}, ${language}, and ${phone}.`;
+  }
+
+  document.getElementById('profileForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = document.getElementById('saveBtn');
+    const phone = document.getElementById('phone').value;
+    const problem = phoneProblem(phone);
+    if (problem) {
+      show(problem, false);
+      return;
+    }
+    button.disabled = true;
+    try {
+      const saved = await window.auth.updateProfile({
+        username: document.getElementById('username').value.trim(),
+        preferred_language: document.getElementById('language').value,
+        country_code: document.getElementById('countryCode').value,
+        phone,
+      });
+      show(savedSummary(saved), true);
+    } catch (err) {
+      show(err.message, false);
+    }
+    button.disabled = false;
+  });
+
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await window.auth.signOut();
+    location.href = 'index.html';
+  });
+
+  (async function start() {
+    const user = await window.auth.currentUser();
+
+    if (!user) {
+      document.getElementById('signedOut').style.display = '';
+      document.getElementById('signedIn').style.display = 'none';
+      return;
+    }
+
+    // Already signed in and not here to edit the profile -- carry on.
+    if (params.get('mode') !== 'profile') {
+      location.href = safeNext();
+      return;
+    }
+
+    document.title = 'Your profile — AniDub India';
+    document.getElementById('title').textContent = 'Your profile';
+    document.getElementById('lead').textContent = 'The name shown next to your account, the dub language you watch, and an optional phone number.';
+    document.getElementById('signedOut').style.display = 'none';
+    document.getElementById('signedIn').style.display = '';
+    document.getElementById('whoami').textContent = user.email;
+    document.getElementById('username').value = user.username || '';
+    document.getElementById('language').value = user.preferred_language || '';
+    const storedPhone = splitStoredPhone(user.phone);
+    document.getElementById('countryCode').value = storedPhone.code;
+    document.getElementById('phone').value = storedPhone.number;
+  })();
+</script>
+</body>
+</html>

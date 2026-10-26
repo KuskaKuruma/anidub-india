@@ -467,6 +467,7 @@ function submitFeedback() {
 </script>
 
 <script src="supabase-config.js"></script>
+<script src="account.js"></script>
 <script>
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -552,8 +553,8 @@ function submitFeedback() {
     try {
       const { data } = await supabaseClient
         .from('anime')
-        .select('title, japanese_title')
-        .eq('status', 'active');
+        // Only titles with at least one dub row count as dubbed.
+        .select('title, japanese_title, dubs!inner(anime_id)');
       const titles = new Set();
       (data || []).forEach(a => {
         if (a.title) titles.add(a.title.toLowerCase());

@@ -139,8 +139,49 @@
     }
     .season-ep { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
 
+    /* ── Watchlist ── */
+    .watch-row { margin: 14px 0 4px; }
+    .watch-wrap { position: relative; display: inline-block; }
+    .watch-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 9px; border: none;
+      background: var(--accent); color: #fff;
+      font-family: inherit; font-size: 0.87rem; font-weight: 700;
+      cursor: pointer; transition: filter 0.15s;
+    }
+    .watch-btn:hover:not(:disabled) { filter: brightness(1.12); }
+    .watch-btn:disabled { opacity: 0.6; cursor: default; }
+    /* Already on the list: quieter, because the job is done. */
+    .watch-btn.tracked {
+      background: var(--surface2); border: 1px solid var(--accent); color: var(--accent);
+    }
+    .watch-menu {
+      position: absolute; top: calc(100% + 6px); left: 0; min-width: 200px; z-index: 30;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+    }
+    .watch-menu button {
+      display: block; width: 100%; text-align: left;
+      background: none; border: none; color: var(--text);
+      font-family: inherit; font-size: 0.85rem; padding: 9px 11px;
+      border-radius: 7px; cursor: pointer;
+    }
+    .watch-menu button:hover { background: var(--surface); }
+    .watch-menu button.on { color: var(--accent); font-weight: 700; }
+    .watch-menu button.danger { color: var(--red); }
+    .watch-menu .sep { height: 1px; background: var(--border); margin: 5px 2px; }
+    .watch-signin {
+      display: inline-block; padding: 9px 16px; border-radius: 9px; text-decoration: none;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text-muted); font-size: 0.87rem; font-weight: 600;
+    }
+    .watch-signin:hover { color: var(--text); border-color: var(--accent); }
+
+    /* On a phone the five columns are wider than the screen. Scroll the
+       table, not the whole page. */
+    .dub-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .dub-table {
-      width: 100%; border-collapse: collapse;
+      width: 100%; min-width: 440px; border-collapse: collapse;
       background: var(--surface); border-radius: 10px; overflow: hidden;
       border: 1px solid var(--border);
     }
@@ -221,6 +262,7 @@
 </div>
 
 <script src="supabase-config.js"></script>
+<script src="account.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const animeId = params.get('id');
@@ -250,10 +292,6 @@
   }
 
   function posterUrl(anime) {
-    if (anime.poster_path) {
-      const { data } = supabase.storage.from('posters').getPublicUrl(anime.poster_path);
-      return data.publicUrl;
-    }
     return sharperPoster(anime.poster_url);
   }
 
@@ -270,7 +308,7 @@
 
   function renderDubTable(dubs) {
     if (!dubs.length) return '<p class="no-dubs">No dubs recorded for this season yet.</p>';
-    return `<table class="dub-table">
+    return `<div class="dub-table-wrap"><table class="dub-table">
       <thead><tr>
         <th>Language</th><th>Platform</th><th>Status</th><th>Episodes</th><th>Notes</th>
       </tr></thead>
@@ -288,7 +326,7 @@
           <td style="color:var(--text-muted)">${d.notes ? String(d.notes).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) : '—'}</td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
   }
 
   function renderPage(anime, seasons, dubs) {
@@ -363,6 +401,7 @@
             ${anime.total_episodes ? `<span class="meta-tag">${anime.total_episodes} eps</span>` : ''}
             <span class="meta-tag ${statusCls}">${anime.status}</span>
           </div>
+          <div class="watch-row" id="watchRow"></div>
           <div class="genre-list">${genres}</div>
           ${anime.synopsis ? `
             <p class="synopsis" id="synopsis">${anime.synopsis}</p>
@@ -409,6 +448,110 @@
 
     app.innerHTML = renderPage(animeData, seasonsData, dubsData);
     fillPosterFromMal(animeData);
+    renderWatchRow();
+  }
+
+  /* ── Watchlist ──
+     The row starts empty and is filled once we know whether anyone is
+     signed in, matching how account.js fills the nav. Row Level Security
+     limits every query below to the signed-in person's own rows. */
+
+  const WATCH_LABELS = {
+    watching: 'Watching',
+    completed: 'Completed',
+    plan_to_watch: 'Plan to watch',
+  };
+  let watchStatus = null;    // null means "not on the list"
+  let watchMenuOpen = false;
+  let watchUser = null;
+
+  async function renderWatchRow() {
+    const row = document.getElementById('watchRow');
+    if (!row) return;
+
+    watchUser = await window.auth.currentUser();
+    if (!watchUser) {
+      row.innerHTML = `<a class="watch-signin" href="${window.auth.loginPageUrl(`anime.html?id=${animeId}`)}">Log in to track this</a>`;
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('watchlist')
+      .select('status')
+      .eq('anime_id', animeId)
+      .maybeSingle();
+    if (error) console.error(error);
+    watchStatus = data ? data.status : null;
+
+    paintWatchRow();
+  }
+
+  function paintWatchRow() {
+    const row = document.getElementById('watchRow');
+    if (!row) return;
+
+    const label = watchStatus
+      ? `✓ ${WATCH_LABELS[watchStatus]}`
+      : '+ Add to My List';
+
+    const items = Object.entries(WATCH_LABELS).map(([value, text]) =>
+      `<button class="${watchStatus === value ? 'on' : ''}" onclick="pickWatchStatus('${value}')">${text}</button>`
+    ).join('');
+
+    const remove = watchStatus
+      ? `<div class="sep"></div><button class="danger" onclick="pickWatchStatus(null)">Remove from list</button>`
+      : '';
+
+    row.innerHTML = `<div class="watch-wrap">
+        <button class="watch-btn ${watchStatus ? 'tracked' : ''}" onclick="toggleWatchMenu(event)"
+                aria-haspopup="menu" aria-expanded="${watchMenuOpen}">${label} <span aria-hidden="true">▾</span></button>
+        ${watchMenuOpen ? `<div class="watch-menu" role="menu">${items}${remove}</div>` : ''}
+      </div>`;
+  }
+
+  function toggleWatchMenu(event) {
+    if (event) event.stopPropagation();   // so the document handler does not close it again
+    watchMenuOpen = !watchMenuOpen;
+    paintWatchRow();
+  }
+
+  function closeWatchMenu() {
+    if (!watchMenuOpen) return;
+    watchMenuOpen = false;
+    paintWatchRow();
+  }
+
+  document.addEventListener('click', (event) => {
+    const wrap = document.querySelector('.watch-wrap');
+    if (wrap && wrap.contains(event.target)) return;
+    closeWatchMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeWatchMenu();
+  });
+
+  async function pickWatchStatus(status) {
+    const previous = watchStatus;
+    watchMenuOpen = false;
+
+    // Show the new state at once; put it back if the write fails.
+    watchStatus = status;
+    paintWatchRow();
+    const button = document.querySelector('.watch-btn');
+    if (button) button.disabled = true;
+
+    const { error } = status === null
+      ? await supabaseClient.from('watchlist').delete()
+          .eq('user_id', watchUser.id).eq('anime_id', animeId)
+      : await supabaseClient.from('watchlist').upsert(
+          { user_id: watchUser.id, anime_id: Number(animeId), status, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,anime_id' }
+        );
+    if (error) {
+      console.error(error);
+      watchStatus = previous;
+    }
+    paintWatchRow();
   }
 
   async function fillPosterFromMal(anime) {
