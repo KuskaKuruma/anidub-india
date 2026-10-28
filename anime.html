@@ -263,9 +263,11 @@
 
 <script src="supabase-config.js"></script>
 <script src="account.js"></script>
+<script src="browse-nav.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const animeId = params.get('id');
+  const fromPage = params.get('from');
 
   const langColors = {
     Tamil: '#dc2626', Telugu: '#d97706', Hindi: '#16a34a',
@@ -391,7 +393,7 @@
       <div class="hero-inner">
         <div class="poster">${imgEl}${placeholder}</div>
         <div class="hero-info">
-          <a class="back-link" href="index.html">← Back to Browse</a>
+          <span id="animeBackSlot"></span>
           <h1 class="anime-title">${anime.title}</h1>
           ${anime.title_jp ? `<div class="anime-title-jp">${anime.title_jp}</div>` : ''}
           <div class="meta-row">
@@ -447,6 +449,7 @@
     );
 
     app.innerHTML = renderPage(animeData, seasonsData, dubsData);
+    window.browseNav.mountAnimeBackLink(document.getElementById('animeBackSlot'), fromPage);
     fillPosterFromMal(animeData);
     renderWatchRow();
   }

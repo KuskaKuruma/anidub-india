@@ -539,6 +539,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="account.js"></script>
+<script src="browse-nav.js"></script>
 <script>
   const PAGE_SIZE = 24; // divisible by 6,4,3,2 — no orphan last row
   let currentPage = 1;
@@ -549,6 +550,54 @@
   let currentSort = 'recently_added';
   let searchQuery = '';
   let debounceTimer;
+
+  /** Put filters/page in the URL so browser Back restores the same library view. */
+  function libraryQueryString() {
+    const p = new URLSearchParams();
+    if (currentLang && currentLang !== 'All') p.set('lang', currentLang);
+    if (currentGenre) p.set('genre', currentGenre);
+    if (currentType) p.set('type', currentType);
+    if (currentStatus) p.set('status', currentStatus);
+    if (currentSort && currentSort !== 'recently_added') p.set('sort', currentSort);
+    if (searchQuery) p.set('q', searchQuery);
+    if (currentPage > 1) p.set('page', String(currentPage));
+    return p.toString();
+  }
+
+  function syncLibraryUrl() {
+    const qs = libraryQueryString();
+    history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : ''));
+  }
+
+  function applyLibraryFromUrl() {
+    const p = new URLSearchParams(location.search);
+    currentLang = p.get('lang') || 'All';
+    currentGenre = p.get('genre') || '';
+    currentType = p.get('type') || '';
+    currentStatus = p.get('status') || '';
+    currentSort = p.get('sort') || 'recently_added';
+    searchQuery = p.get('q') || '';
+    currentPage = Math.max(1, parseInt(p.get('page') || '1', 10) || 1);
+
+    document.querySelectorAll('#langFilters .chip').forEach((chip) => {
+      chip.classList.toggle('active', chip.dataset.lang === currentLang);
+    });
+    const genreEl = document.getElementById('genreFilter');
+    const typeEl = document.getElementById('typeFilter');
+    const statusEl = document.getElementById('statusFilter');
+    const sortEl = document.getElementById('sortSelect');
+    const searchEl = document.getElementById('searchInput');
+    if (genreEl) genreEl.value = currentGenre;
+    if (typeEl) typeEl.value = currentType;
+    if (statusEl) statusEl.value = currentStatus;
+    if (sortEl) sortEl.value = currentSort;
+    if (searchEl) searchEl.value = searchQuery;
+  }
+
+  function currentLibraryFrom() {
+    const qs = libraryQueryString();
+    return qs ? `index.html?${qs}` : 'index.html';
+  }
 
   // ── 5-minute in-memory cache ──
   const cache = {};
@@ -656,7 +705,7 @@
             ourTitle.includes(english) || english.includes(ourTitle);
           if (!match) return;
 
-          const card = document.querySelector(`.anime-card[href="anime.html?id=${a.id}"]`);
+          const card = document.querySelector(`.anime-card[data-anime-id="${a.id}"]`);
           if (!card) return;
           const img = card.querySelector('img.poster-anilist');
           const placeholder = card.querySelector('.poster-placeholder');
@@ -692,7 +741,7 @@
       `<span class="dub-badge" style="background:${langColor(l)}aa">${l.slice(0,3)}</span>`
     ).join('');
 
-    return `<a class="anime-card" href="anime.html?id=${anime.id}" title="${anime.title}">
+    return `<a class="anime-card" data-anime-id="${anime.id}" href="${window.browseNav.animeDetailHref(anime.id, currentLibraryFrom())}" title="${anime.title}">
       <div class="poster-wrap">
         ${imgEl}
         ${placeholder}
@@ -754,6 +803,11 @@
     }
 
     renderPagination(count);
+    syncLibraryUrl();
+    const scrollY = window.browseNav.takeLibraryScroll();
+    if (scrollY != null) {
+      requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    }
   }
 
   function renderPagination(total) {
@@ -852,6 +906,11 @@
     render();
   });
 
+  document.getElementById('animeGrid').addEventListener('click', (event) => {
+    if (event.target.closest('a.anime-card')) window.browseNav.saveLibraryScroll();
+  });
+
+  applyLibraryFromUrl();
   render();
   loadUpdates();
 </script>

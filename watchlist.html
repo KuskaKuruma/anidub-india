@@ -258,6 +258,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="account.js"></script>
+<script src="browse-nav.js"></script>
 <script>
   const STATUSES = [
     { key: 'all',           label: 'All' },
@@ -301,7 +302,8 @@
     const placeholder = `<div class="poster-placeholder" ${src ? 'style="display:none"' : ''}>${esc(anime.title)}</div>`;
     const status = anime.watch_status;
 
-    return `<a class="anime-card" href="anime.html?id=${anime.id}" title="${esc(anime.title)}">
+    const from = window.browseNav.safeFromPage('watchlist.html');
+    return `<a class="anime-card" href="${esc(window.browseNav.animeDetailHref(anime.id, from))}" title="${esc(anime.title)}">
       <div class="poster-wrap">
         <span class="watch-pill ${status}">${LABEL[status] || status}</span>
         ${img}${placeholder}

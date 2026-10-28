@@ -97,13 +97,9 @@ begin
 end $$;
 
 revoke all on public.profiles from anon, authenticated;
-grant select on public.profiles to authenticated;
--- Column grant: the browser can change these columns and nothing else, so
--- user_id cannot be rewritten to point at someone else.
-grant insert (user_id, username, preferred_language, phone, welcomed, updated_at)
-  on public.profiles to authenticated;
-grant update (username, preferred_language, phone, welcomed, updated_at)
-  on public.profiles to authenticated;
+-- Table-level grants: upsert needs both INSERT and UPDATE. RLS limits rows to
+-- auth.uid(); no anon access.
+grant select, insert, update on table public.profiles to authenticated;
 
 create policy "Read own profile" on public.profiles
   for select to authenticated using (user_id = auth.uid());
