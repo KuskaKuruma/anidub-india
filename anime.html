@@ -58,13 +58,19 @@
       max-width: 960px;
       margin: 0 auto;
       padding: 40px 24px;
-      display: flex;
-      gap: 32px;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      grid-template-areas:
+        "back back"
+        "poster info";
+      column-gap: 32px;
+      row-gap: 16px;
     }
+    .hero-back-slot { grid-area: back; }
 
     .poster {
-      flex-shrink: 0;
-      align-self: flex-start;
+      grid-area: poster;
+      align-self: start;
       width: 200px;
       height: 300px;
       border-radius: 12px;
@@ -81,11 +87,11 @@
       background: linear-gradient(135deg, #1e1e2c, #2a2a3d);
     }
 
-    .hero-info { flex: 1; }
+    .hero-info { grid-area: info; min-width: 0; }
     .back-link {
       display: inline-flex; align-items: center; gap: 6px;
       color: var(--text-muted); text-decoration: none; font-size: 0.85rem;
-      margin-bottom: 16px; transition: color 0.2s;
+      transition: color 0.2s;
     }
     .back-link:hover { color: var(--text); }
     .anime-title { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
@@ -238,7 +244,15 @@
     .error-msg a { color: var(--accent); }
 
     @media (max-width: 600px) {
-      .hero-inner { flex-direction: column; padding: 24px 16px; }
+      .hero-inner {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "back"
+          "poster"
+          "info";
+        padding: 24px 16px;
+        row-gap: 12px;
+      }
       .poster { width: 140px; height: 210px; }
       .content { padding: 24px 16px; }
       nav { padding: 0 16px; }
@@ -391,9 +405,9 @@
     return `
     <div class="hero-bg">
       <div class="hero-inner">
+        <div class="hero-back-slot" id="animeBackSlot"></div>
         <div class="poster">${imgEl}${placeholder}</div>
         <div class="hero-info">
-          <span id="animeBackSlot"></span>
           <h1 class="anime-title">${anime.title}</h1>
           ${anime.title_jp ? `<div class="anime-title-jp">${anime.title_jp}</div>` : ''}
           <div class="meta-row">
