@@ -201,14 +201,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       overflow: hidden;
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.15s;
-      text-decoration: none;
       display: block;
-    }
-    .anime-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
     }
 
     .card-poster {
@@ -273,6 +266,13 @@
       border: 1px solid rgba(34,197,94,0.3);
       padding: 1px 6px;
       border-radius: 99px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .card-dub-badge:hover {
+      background: rgba(34,197,94,0.28);
+      border-color: rgba(34,197,94,0.55);
     }
 
     /* ── Empty day ── */
@@ -519,7 +519,6 @@ function submitFeedback() {
               id
               title { romaji english }
               coverImage { extraLarge large }
-              siteUrl
               format
             }
           }
@@ -547,29 +546,30 @@ function submitFeedback() {
     return all;
   }
 
-  /* ── Fetch dubbed anime titles from our Supabase DB ── */
+  /* ── Map of lowercase title → our anime id, for schedule badges ── */
   async function fetchDubbedTitles() {
-    if (!window.supabaseClient) return new Set();
+    if (!window.supabaseClient) return new Map();
     try {
       const { data } = await supabaseClient
         .from('anime')
         // Only titles with at least one dub row count as dubbed.
-        .select('title, japanese_title, dubs!inner(anime_id)');
-      const titles = new Set();
+        .select('id, title, japanese_title, dubs!inner(anime_id)');
+      const byTitle = new Map();
       (data || []).forEach(a => {
-        if (a.title) titles.add(a.title.toLowerCase());
-        if (a.japanese_title) titles.add(a.japanese_title.toLowerCase());
+        if (!a.id) return;
+        if (a.title) byTitle.set(a.title.toLowerCase(), a.id);
+        if (a.japanese_title) byTitle.set(a.japanese_title.toLowerCase(), a.id);
       });
-      return titles;
-    } catch { return new Set(); }
+      return byTitle;
+    } catch { return new Map(); }
   }
 
-  /* ── Check if an AniList media has a known Indian dub ── */
-  function hasDub(media, dubbedTitles) {
-    if (!dubbedTitles.size) return false;
+  /* ── Our anime id if this AniList media has a known Indian dub ── */
+  function dubAnimeId(media, dubbedTitles) {
+    if (!dubbedTitles.size) return null;
     const romaji = (media.title.romaji || '').toLowerCase();
     const english = (media.title.english || '').toLowerCase();
-    return dubbedTitles.has(romaji) || dubbedTitles.has(english);
+    return dubbedTitles.get(romaji) || dubbedTitles.get(english) || null;
   }
 
   /* ── Build and render the grid ── */
@@ -643,18 +643,19 @@ function submitFeedback() {
         entries_div.innerHTML = '<div class="day-empty">No episodes</div>';
       } else {
         dayEntries.forEach(e => {
-          const dubbed = hasDub(e.media, dubbedTitles);
+          const ourId = dubAnimeId(e.media, dubbedTitles);
           const title = e.media.title.english || e.media.title.romaji;
-          const card = document.createElement('a');
+          const card = document.createElement('div');
           card.className = 'anime-card';
-          card.href = e.media.siteUrl || '#';
-          card.target = '_blank';
-          card.rel = 'noopener';
 
           const poster = e.media.coverImage?.extraLarge || e.media.coverImage?.large;
           const posterHTML = poster
             ? `<img class="card-poster" src="${poster}" alt="${title}" loading="lazy" />`
             : `<div class="card-poster-placeholder">🎬</div>`;
+
+          const badge = ourId
+            ? `<a class="card-dub-badge" href="anime.html?id=${ourId}">Indian dub available</a>`
+            : '';
 
           card.innerHTML = `
             ${posterHTML}
@@ -662,7 +663,7 @@ function submitFeedback() {
               <div class="card-time"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${toIST(e.airingAt)}</div>
               <div class="card-title">${title}</div>
               <div class="card-ep">EP ${e.episode}</div>
-              ${dubbed ? '<div class="card-dub-badge">Indian dub available</div>' : ''}
+              ${badge}
             </div>
           `;
           entries_div.appendChild(card);

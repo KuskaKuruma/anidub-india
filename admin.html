@@ -294,8 +294,7 @@
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Seasons & Dubs</div>
-        <button class="sidebar-btn" onclick="showPanel('addSeason')">+ Add Season</button>
-        <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Dub</button>
+        <button class="sidebar-btn" onclick="showPanel('addDub')">+ Add Season / Dub</button>
         <button class="sidebar-btn" onclick="showPanel('editDubs')">Edit Dubs</button>
       </div>
       <div class="sidebar-section">
@@ -413,38 +412,9 @@
         </div>
       </div>
 
-      <!-- ── Add Season ── -->
-      <div class="panel" id="panel-addSeason">
-        <div class="panel-title">Add Season</div>
-        <div id="addSeasonAlert" class="alert"></div>
-        <div class="card">
-          <div class="form-group">
-            <label>Select Anime *</label>
-            <input type="text" id="s_search" placeholder="Search by title…" oninput="filterAnimeSelect('s_search','s_anime_id')" style="margin-bottom:8px" />
-            <select id="s_anime_id" onchange="loadSeasonsForSeasonForm(this.value)"><option value="">— select —</option></select>
-          </div>
-          <div id="s_existing"></div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label>Season Number *</label>
-              <input type="number" id="s_number" placeholder="2" min="1" />
-            </div>
-            <div class="form-group">
-              <label>Season Name</label>
-              <input type="text" id="s_title" placeholder="Season 2" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Year</label>
-            <input type="number" id="s_year" placeholder="2026" min="1960" />
-          </div>
-          <button class="btn btn-primary" onclick="saveSeason()">Save Season</button>
-        </div>
-      </div>
-
-      <!-- ── Add Dub ── -->
+      <!-- ── Add Season / Dub ── -->
       <div class="panel" id="panel-addDub">
-        <div class="panel-title">Add Dub</div>
+        <div class="panel-title">Add Season / Dub</div>
         <div id="addDubAlert" class="alert"></div>
         <div class="card">
           <div class="form-group">
@@ -457,7 +427,7 @@
             <select id="d_season_id" onchange="toggleNewSeasonFields()">
               <option value="">— select —</option>
             </select>
-            <small style="color:var(--text-muted);margin-top:6px;display:block">When the next season’s dub is released, choose “Add next season”.</small>
+            <small style="color:var(--text-muted);margin-top:6px;display:block">Pick an existing season, or “Add next season” to create one with this dub.</small>
           </div>
           <div id="d_new_season" style="display:none">
             <div class="grid-2">
@@ -469,6 +439,10 @@
                 <label>Season Name</label>
                 <input type="text" id="d_season_name" placeholder="Season 2" />
               </div>
+            </div>
+            <div class="form-group">
+              <label>Year</label>
+              <input type="number" id="d_season_year" placeholder="2026" min="1960" />
             </div>
           </div>
           <div class="form-group">
@@ -516,7 +490,7 @@
             <label>Notes</label>
             <input type="text" id="d_notes" placeholder="Optional" />
           </div>
-          <button class="btn btn-primary" onclick="saveDub()">Save Dub</button>
+          <button class="btn btn-primary" onclick="saveDub()">Save Season / Dub</button>
         </div>
       </div>
 
@@ -902,12 +876,7 @@
     if (button) button.classList.add('active');
 
     if (name === 'listAnime') renderAnimeList(animeCache);
-    if (name === 'addSeason' || name === 'addDub' || name === 'editDubs') populateAnimeSelects();
-    if (name === 'addSeason') {
-      filterAnimeSelect('s_search', 's_anime_id');
-      const seasonAnime = document.getElementById('s_anime_id').value;
-      if (seasonAnime) loadSeasonsForSeasonForm(seasonAnime);
-    }
+    if (name === 'addDub' || name === 'editDubs') populateAnimeSelects();
     if (name === 'addDub') {
       filterAnimeSelect('d_search', 'd_anime_id');
       const dubAnime = document.getElementById('d_anime_id').value;
@@ -1109,12 +1078,12 @@
   }
 
   function populateAnimeSelects() {
-    ['s_anime_id', 'd_anime_id', 'ed_anime_id'].forEach(id => {
+    ['d_anime_id', 'ed_anime_id'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
       const current = el.value;
       el.innerHTML = '<option value="">— select —</option>' +
-        animeCache.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+        animeCache.map(a => `<option value="${a.id}">${esc(a.title)}</option>`).join('');
       if ([...el.options].some(option => option.value === current)) el.value = current;
     });
   }
@@ -1216,7 +1185,7 @@
       })))
       .select();
     if (seasonError) {
-      showAlert(alert, `"${title}" was saved, but the seasons were not: ${seasonError.message}. Add them under Add Season.`, 'error');
+      showAlert(alert, `"${title}" was saved, but the seasons were not: ${seasonError.message}. Add them under Add Season / Dub.`, 'error');
       btn.disabled = false; btn.textContent = 'Save Anime';
       await loadAnimeList();
       return;
@@ -1352,7 +1321,7 @@
     const seasonList = seasonRows || [];
     const seasonCount = document.getElementById('e_season_count');
     if (!seasonList.length) {
-      seasonCount.textContent = 'No seasons yet. Add one under Add Season.';
+      seasonCount.textContent = 'No seasons yet. Add one under Add Season / Dub.';
     } else {
       const names = seasonList.map(season => {
         const fallback = `Season ${season.season_number}`;
@@ -1458,70 +1427,29 @@
     const select = document.getElementById(selectId);
     if (!select) return;
     const query = document.getElementById(searchId).value.trim().toLowerCase();
-    const current = select.value;
+    const prev = select.value;
     const matches = animeCache.filter(anime => !query || anime.title.toLowerCase().includes(query));
-    if (current && !matches.some(anime => String(anime.id) === current)) {
-      const selected = animeCache.find(anime => String(anime.id) === current);
+    // Keep a prior selection visible even if it no longer matches the query,
+    // unless the query narrows to a single different title (auto-pick that).
+    if (prev && !matches.some(anime => String(anime.id) === prev) && matches.length !== 1) {
+      const selected = animeCache.find(anime => String(anime.id) === prev);
       if (selected) matches.unshift(selected);
     }
     select.innerHTML = '<option value="">— select —</option>' +
       matches.map(anime => `<option value="${anime.id}">${esc(anime.title)}</option>`).join('');
-    if (matches.some(anime => String(anime.id) === current)) select.value = current;
+    if (matches.length === 1) {
+      select.value = String(matches[0].id);
+    } else if (matches.some(anime => String(anime.id) === prev)) {
+      select.value = prev;
+    } else {
+      select.value = '';
+    }
+    if (select.value !== prev) select.dispatchEvent(new Event('change'));
   }
 
   let dubSeasonCache = [];
 
-  async function loadSeasonsForSeasonForm(animeId) {
-    const wrap = document.getElementById('s_existing');
-    if (!animeId) { wrap.innerHTML = ''; return; }
-    const { data, error } = await supabaseClient
-      .from('seasons')
-      .select('id, season_number, season_name, year')
-      .eq('anime_id', animeId)
-      .order('season_number')
-      .order('id');
-    if (error) { wrap.innerHTML = `<p style="color:var(--red)">${esc(error.message)}</p>`; return; }
-
-    const seasons = data || [];
-    const next = seasons.reduce((max, season) => Math.max(max, season.season_number || 0), 0) + 1;
-    document.getElementById('s_number').value = next;
-    document.getElementById('s_title').value = `Season ${next}`;
-    if (!seasons.length) {
-      wrap.innerHTML = '<p style="color:var(--text-muted);margin-bottom:12px">No seasons yet. This will be the first.</p>';
-      return;
-    }
-    wrap.innerHTML = `<p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:8px">Already added</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-        ${seasons.map(season => `<span class="genre-chip" style="cursor:default">${esc(seasonLabel(season))}${season.year ? ' · ' + season.year : ''}</span>`).join('')}
-      </div>`;
-  }
-
-  // ── Save Season ──
-  async function saveSeason() {
-    const alert = document.getElementById('addSeasonAlert');
-    const anime_id = document.getElementById('s_anime_id').value;
-    const season_number = parseInt(document.getElementById('s_number').value);
-    if (!anime_id || !season_number) {
-      showAlert(alert, 'Anime and Season Number are required.', 'error');
-      return;
-    }
-
-    const year = parseInt(document.getElementById('s_year').value);
-    const row = {
-      anime_id,
-      season_number,
-      season_name: document.getElementById('s_title').value.trim() || `Season ${season_number}`,
-      year: Number.isInteger(year) ? year : null,
-    };
-
-    const { error } = await supabaseClient.from('seasons').insert(row);
-    if (error) { showAlert(alert, error.message, 'error'); return; }
-    showAlert(alert, `${row.season_name} added. Use Add Dub to record its languages.`, 'success');
-    document.getElementById('s_year').value = '';
-    loadSeasonsForSeasonForm(anime_id);
-  }
-
-  // ── Load seasons for dub form ──
+  // ── Load seasons for Add Season / Dub ──
   async function loadSeasonsForDub(animeId) {
     const sel = document.getElementById('d_season_id');
     document.getElementById('d_new_season').style.display = 'none';
@@ -1564,6 +1492,7 @@
       const next = dubSeasonCache.reduce((max, season) => Math.max(max, season.season_number || 0), 0) + 1;
       document.getElementById('d_season_number').value = next;
       document.getElementById('d_season_name').value = `Season ${next}`;
+      document.getElementById('d_season_year').value = '';
       document.getElementById('d_status').value = 'Ongoing';
       return;
     }
@@ -1589,15 +1518,22 @@
 
     let season_id = seasonChoice;
     if (seasonChoice === 'new') {
-      const season_number = parseInt(document.getElementById('d_season_number').value);
+      const season_number = parseInt(document.getElementById('d_season_number').value, 10);
       if (!season_number) {
         showAlert(alert, 'Season number is required.', 'error');
         return;
       }
       const season_name = document.getElementById('d_season_name').value.trim() || `Season ${season_number}`;
+      const yearRaw = parseInt(document.getElementById('d_season_year').value, 10);
+      const seasonRow = {
+        anime_id: parseInt(anime_id, 10),
+        season_number,
+        season_name,
+        year: Number.isInteger(yearRaw) ? yearRaw : null,
+      };
       const { data, error } = await supabaseClient
         .from('seasons')
-        .insert({ anime_id, season_number, season_name })
+        .insert(seasonRow)
         .select('id, season_number, season_name')
         .single();
       if (error) { showAlert(alert, error.message, 'error'); return; }
